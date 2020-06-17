@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QBoxLayout>
+#include <QStandardItem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -17,5 +19,7 @@ public:
     
 private:
     Ui::MainWindow *ui;
+    // stages table contents
+    QStandardItemModel *std_table_model;
 };
 #endif // MAINWINDOW_H

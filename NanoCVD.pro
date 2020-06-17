@@ -1,4 +1,4 @@
-QT       += core gui printsupport serialport
+QT       += core gui widgets printsupport serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
