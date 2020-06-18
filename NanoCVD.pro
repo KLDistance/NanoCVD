@@ -20,12 +20,14 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     psuaruidno.cpp \
+    qledindicator.cpp \
     targetdevice.cpp
 
 HEADERS += \
     cncrouter.h \
     mainwindow.h \
     psuaruidno.h \
+    qledindicator.h \
     targetdevice.h
 
 FORMS += \
