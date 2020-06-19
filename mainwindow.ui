@@ -411,9 +411,9 @@
             </spacer>
            </item>
            <item>
-            <widget class="QLabel" name="label_motionswitching">
+            <widget class="QLabel" name="label_motionselection">
              <property name="text">
-              <string>Motion Magnitude Switching (F)</string>
+              <string>Motion Magnitude Selection (1,2,3)</string>
              </property>
             </widget>
            </item>

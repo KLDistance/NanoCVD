@@ -3,9 +3,11 @@
 
 #include <QMainWindow>
 #include <QBoxLayout>
+#include <QMessageBox>
 #include <QStandardItem>
 
 #include "qledindicator.h"
+#include "targetdevice.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -19,15 +21,24 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     
-private:
-    Ui::MainWindow *ui;
     // stages table contents
     QStandardItemModel *std_table_model;
     // virtual led indicators
     QList<QLedIndicator*> serialport_leds;
     QList<QLedIndicator*> positioning_leds;
     
+    // target device
+    TargetDevice *target_device;
+    
     // led initialization
     void led_init();
+    void obtain_comport_list();
+    
+private slots:
+    // cnc router comport connection
+    void on_btn_cncconnect_clicked();
+    
+private:
+    Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H

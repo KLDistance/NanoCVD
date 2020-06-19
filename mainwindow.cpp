@@ -16,6 +16,12 @@ MainWindow::MainWindow(QWidget *parent)
     this->std_table_model->setColumnCount(4);
     this->std_table_model->setRowCount(1);
     ui->table_runningstages->setModel(this->std_table_model);
+    
+    // set up target device component
+    this->target_device = new TargetDevice(this);
+    // scan available ports at the boot of the software (needs modification)
+    this->target_device->ComportScan();
+    this->obtain_comport_list();
 }
 
 MainWindow::~MainWindow()
@@ -47,3 +53,21 @@ void MainWindow::led_init()
     this->positioning_leds[0]->toggle();
 }
 
+void MainWindow::obtain_comport_list()
+{
+    int port_num = this->target_device->get_port_name_list().size();
+    for(int iter = 0; iter < port_num; iter++)
+    {
+        ui->cbox_cncserialports->addItem(this->target_device->get_port_name_list()[iter]);
+        ui->cbox_arduinoserialports->addItem(this->target_device->get_port_name_list()[iter]);
+    }
+}
+
+
+void MainWindow::on_btn_cncconnect_clicked()
+{
+    this->target_device->PickCNCRouterPort(
+                this->target_device->get_port_name_list()[ui->cbox_cncserialports->currentIndex()]
+                );
+    this->target_device->CheckCNCRouterPortValid();
+}

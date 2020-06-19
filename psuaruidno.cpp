@@ -3,7 +3,7 @@
 PSUAruidno::PSUAruidno(QObject *parent) :
     QObject(parent)
 {
-    
+    this->psuarduino = new QSerialPort(this);
 }
 
 void PSUAruidno::PickComport(QString &port_name)
