@@ -33,7 +33,9 @@ public:
     // led initialization
     void led_init();
     void obtain_comport_list();
-    
+    // set labels and ledits for positioning and motion states
+    void set_position_feedback_labels(double x, double y, double z);
+    void set_position_state_labels(QString state);
 private slots:
     // cnc router comport connection
     void on_btn_cncconnect_clicked();

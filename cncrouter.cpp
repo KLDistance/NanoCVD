@@ -62,7 +62,10 @@ int CNCRouter::CheckValidDevice()
 
 void CNCRouter::WriteIntoTarget(const QString &data)
 {
+    this->cncrouter->setRequestToSend(true);
     this->cncrouter->write(data.toUtf8());
+    this->cncrouter->waitForBytesWritten(300);
+    this->cncrouter->setRequestToSend(false);
 }
 
 void CNCRouter::run()
@@ -93,8 +96,10 @@ void CNCRouter::run()
             }
         }
         this->ext_mutex.unlock();
+        // position handler
+        
         // delay for less CPU stress (self-spinning thread, not event-driven thread)
-        QThread::msleep(20);
+        QThread::msleep(10);
     }
 }
 
@@ -137,8 +142,11 @@ void CNCRouter::position_query()
 void CNCRouter::force_brake()
 {
     // ! \n 0x18 \n
-    const char bytes[] = {0x21, 0x0d, 0x18, 0x0d};
+    const char bytes[] = {0x21, 0x0d, 0x18, 0x0d, 0x00};
+    this->cncrouter->setRequestToSend(true);
     this->cncrouter->write(bytes);
+    this->cncrouter->waitForBytesWritten(1000);
+    this->cncrouter->setRequestToSend(false);
 }
 
 bool CNCRouter::is_boot_response(QString &str)
@@ -176,6 +184,25 @@ void CNCRouter::extract_position_info(QString &str)
     emit PositionUpdated(state, x_pos, y_pos, z_pos);
 }
 
+void CNCRouter::position_feedback_handler()
+{
+    this->serialBufMutex.lock();
+    for(int iter = this->serialBufferList.size() - 1; iter >= 0; iter--)
+    {
+        QString content_str = this->serialBufferList[iter];
+        this->serialBufMutex.unlock();
+        if(this->is_position_info(content_str))
+        {
+            this->extract_position_info(content_str);
+            this->serialBufMutex.lock();
+            this->serialBufferList.clear();
+            break;
+        }
+        this->serialBufMutex.lock();
+    }
+    this->serialBufMutex.unlock();
+}
+
 void CNCRouter::check_cncrouter_valid()
 {
     this->ext_mutex.lock();
@@ -186,14 +213,20 @@ void CNCRouter::check_cncrouter_valid()
 
 void CNCRouter::ReadFromTarget()
 {
-    QString tmp = "";
+    QString msg = "";
     while(this->cncrouter->canReadLine())
     {
-        tmp += QString::fromUtf8(this->cncrouter->readLine());
+        QString tmp = QString::fromUtf8(this->cncrouter->readLine());
+        if(tmp == "") 
+        {
+            this->cncrouter->clear(QSerialPort::Direction::Input);
+            break;
+        }
+        msg += tmp;
     }
-    qDebug() << tmp;
+    qDebug() << msg;
     this->serialBufMutex.lock();
-    this->serialBufferList.append(tmp);
+    this->serialBufferList.append(msg);
     this->serialBufferList.removeAll("");
     this->serialBufMutex.unlock();
 }

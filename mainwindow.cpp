@@ -50,7 +50,7 @@ void MainWindow::led_init()
     ui->layout_positioning1->addWidget(this->positioning_leds[0]);
     ui->layout_positioning2->addWidget(this->positioning_leds[1]);
     ui->layout_positioning3->addWidget(this->positioning_leds[2]);
-    this->positioning_leds[0]->toggle();
+    this->positioning_leds[0]->setChecked(true);
 }
 
 void MainWindow::obtain_comport_list()
@@ -61,6 +61,18 @@ void MainWindow::obtain_comport_list()
         ui->cbox_cncserialports->addItem(this->target_device->get_port_name_list()[iter]);
         ui->cbox_arduinoserialports->addItem(this->target_device->get_port_name_list()[iter]);
     }
+}
+
+void MainWindow::set_position_feedback_labels(double x, double y, double z)
+{
+    ui->ledit_xpos->setText(QString::number(x));
+    ui->ledit_ypos->setText(QString::number(y));
+    ui->ledit_zpos->setText(QString::number(z));
+}
+
+void MainWindow::set_position_state_labels(QString state)
+{
+    ui->motionstate->setText(state);
 }
 
 

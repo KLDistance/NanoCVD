@@ -68,3 +68,11 @@ void TargetDevice::obtain_ext_check_cncrouter_valid(bool is_valid)
         QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to this remote device.", QMessageBox::Yes);
     }
 }
+
+void TargetDevice::obtain_cncrouter_position(int state, double x, double y, double z)
+{
+    MainWindow *mWin = (MainWindow*)this->target_parent;
+    mWin->set_position_feedback_labels(x, y, z);
+    if(state) mWin->set_position_state_labels("Running");
+    else mWin->set_position_state_labels("Idle");
+}

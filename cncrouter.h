@@ -54,7 +54,8 @@ private:
     bool is_position_info(QString &str);
     // separate working position from string
     void extract_position_info(QString &str);
-    
+    // position handler
+    void position_feedback_handler();
 public slots:
     void ReadFromTarget();
 signals:
