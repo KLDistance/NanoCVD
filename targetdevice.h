@@ -20,7 +20,14 @@ public:
     void ComportScan();
     void PickCNCRouterPort(QString &port_name);
     void PickPSUArduinoPort(QString &port_name);
+    // check if cnc router comport is valid
     void CheckCNCRouterPortValid();
+    // move cnc router
+    void move_cncrouter(bool consecutive_mode, double x, double y, double z, double speed);
+    // halt cnc router
+    void halt_cncrouter();
+    
+    // check if arduino comport is valid
     int IsPSUArduinoPortValid();
     QVector<QString>& get_port_name_list();
 private:

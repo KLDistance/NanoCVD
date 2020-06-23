@@ -17,6 +17,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     cncrouter.cpp \
+    keyenterreceiver.cpp \
     main.cpp \
     mainwindow.cpp \
     psuaruidno.cpp \
@@ -25,6 +26,7 @@ SOURCES += \
 
 HEADERS += \
     cncrouter.h \
+    keyenterreceiver.h \
     mainwindow.h \
     psuaruidno.h \
     qledindicator.h \

@@ -50,6 +50,26 @@ void TargetDevice::CheckCNCRouterPortValid()
     this->cncrouter->check_cncrouter_valid();
 }
 
+void TargetDevice::move_cncrouter(bool consecutive_mode, double x, double y, double z, double speed)
+{
+    if(consecutive_mode)
+    {
+        // amplify the step to nearly infinitely large
+        // and use small speed
+        
+    }
+    else
+    {
+        this->cncrouter->relative_stepping(x, y, z, speed);
+        this->cncrouter->position_query();
+    }
+}
+
+void TargetDevice::halt_cncrouter()
+{
+    this->cncrouter->force_brake();
+}
+
 QVector<QString> &TargetDevice::get_port_name_list()
 {
     return this->port_name;

@@ -64,7 +64,7 @@ void CNCRouter::WriteIntoTarget(const QString &data)
 {
     this->cncrouter->setRequestToSend(true);
     this->cncrouter->write(data.toUtf8());
-    this->cncrouter->waitForBytesWritten(300);
+    this->cncrouter->waitForBytesWritten(800);
     this->cncrouter->setRequestToSend(false);
 }
 
@@ -82,24 +82,25 @@ void CNCRouter::run()
         this->proc_mutex.unlock();
         // external requests
         this->ext_mutex.lock();
-        if(this->request)
+        switch(this->request)
         {
-            switch(this->request)
-            {
-            // cncrouter serial port valid check
-            case 1:
-            {
-                this->proc_suspend();
-                emit this->ext_valid_device(this->CheckValidDevice());
-                break;
-            }
-            }
+        // cncrouter serial port valid check
+        case 1:
+        {
+            this->proc_suspend();
+            emit this->ext_valid_device(this->CheckValidDevice());
+            break;
+        }
+        // position handler
+        case 2:
+        {
+            this->WriteIntoTarget("?\n");
+            this->position_feedback_handler();
+        }
         }
         this->ext_mutex.unlock();
-        // position handler
-        
         // delay for less CPU stress (self-spinning thread, not event-driven thread)
-        QThread::msleep(10);
+        QThread::msleep(5);
     }
 }
 
@@ -136,7 +137,9 @@ void CNCRouter::relative_stepping(double xstep, double ystep, double zstep, doub
 
 void CNCRouter::position_query()
 {
-    this->WriteIntoTarget("?\n");
+    this->ext_mutex.lock();
+    this->request = 2;
+    this->ext_mutex.unlock();
 }
 
 void CNCRouter::force_brake()
@@ -169,7 +172,12 @@ void CNCRouter::extract_position_info(QString &str)
     // check idle state
     int state = 1;
     QString tmp_state_str = str.split(",")[0];
-    if(tmp_state_str == "<Idle") state = 0;
+    if(tmp_state_str == "<Idle" && this->request == 2) 
+    {
+        this->proc_suspend();
+        this->request = 0;
+        state = 0;
+    }
     // check positions
     double x_pos = 0;
     double y_pos = 0;
