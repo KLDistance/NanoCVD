@@ -10,6 +10,7 @@
 #include "qledindicator.h"
 #include "targetdevice.h"
 #include "keyenterreceiver.h"
+#include "inputdelegate.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

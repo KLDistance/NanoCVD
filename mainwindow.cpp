@@ -10,10 +10,10 @@ MainWindow::MainWindow(QWidget *parent)
     this->led_init();
     // set constraints on inputs
     ui->ledit_prequiescent->setValidator(new QDoubleValidator(0, 100, 2, this));
-    // set running stage table 
-    this->table_init();
     // install widgets focusing policy
     this->widgets_focus_setting();
+    // set running stage table 
+    this->table_init();
     
     // set up target device component
     this->target_device = new TargetDevice(this);
@@ -66,6 +66,7 @@ void MainWindow::table_init()
                                                   Qt::AlignCenter, Qt::TextAlignmentRole);
         this->std_table_model->item(0, iter)->setFont(QFont("Consolas", 12, QFont::Normal));
     }
+    ui->table_runningstages->setItemDelegate(new InputDelegate(this));
     ui->table_runningstages->horizontalHeader()->setFont(QFont("Consolas", 12, QFont::Bold));
     ui->table_runningstages->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
     ui->table_runningstages->verticalHeader()->setFont(QFont("Consolas", 12, QFont::Bold));
