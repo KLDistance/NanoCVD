@@ -48,6 +48,8 @@ private:
     int request = 0;
     QMutex ext_mutex;
     
+    QString last_tmp_str = "";
+    
     // initial boot response recognition
     bool is_boot_response(QString &str);
     // position feedback recognition

@@ -24,6 +24,8 @@ public:
     void CheckCNCRouterPortValid();
     // move cnc router
     void move_cncrouter(bool consecutive_mode, double x, double y, double z, double speed);
+    // check cncrouter position
+    void position_query();
     // halt cnc router
     void halt_cncrouter();
     

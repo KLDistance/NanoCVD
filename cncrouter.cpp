@@ -42,13 +42,11 @@ int CNCRouter::CheckValidDevice()
         this->serialBufMutex.lock();
         for(int jter = 0; jter < this->serialBufferList.size(); jter++)
         {
-            qDebug() << serialBufferList << jter;
             if(this->serialBufferList[jter].length() == 28 && this->serialBufferList[jter] == feedback_lut_str)
             {
                 this->serialBufferList.clear();
                 this->serialBufMutex.unlock();
                 // obtain valid response, return 1
-                qDebug() << iter;
                 return 1;
             }
         }
@@ -64,7 +62,7 @@ void CNCRouter::WriteIntoTarget(const QString &data)
 {
     this->cncrouter->setRequestToSend(true);
     this->cncrouter->write(data.toUtf8());
-    this->cncrouter->waitForBytesWritten(800);
+    this->cncrouter->waitForBytesWritten();
     this->cncrouter->setRequestToSend(false);
 }
 
@@ -87,6 +85,8 @@ void CNCRouter::run()
         // cncrouter serial port valid check
         case 1:
         {
+            this->request = 0;
+            this->ext_mutex.unlock();
             this->proc_suspend();
             emit this->ext_valid_device(this->CheckValidDevice());
             break;
@@ -94,13 +94,11 @@ void CNCRouter::run()
         // position handler
         case 2:
         {
-            this->WriteIntoTarget("?\n");
+            this->ext_mutex.unlock();
+            QThread::msleep(20);
             this->position_feedback_handler();
         }
         }
-        this->ext_mutex.unlock();
-        // delay for less CPU stress (self-spinning thread, not event-driven thread)
-        QThread::msleep(5);
     }
 }
 
@@ -130,7 +128,7 @@ void CNCRouter::proc_resume()
 
 void CNCRouter::relative_stepping(double xstep, double ystep, double zstep, double speed)
 {
-    QString serial_input = "G90G1X" + QString::number(xstep) + "Y" + 
+    QString serial_input = "G21G91X" + QString::number(xstep) + "Y" + 
             QString::number(ystep) + "Z" + QString::number(zstep) + "F" + QString::number(speed)+ "\n";
     this->WriteIntoTarget(serial_input);
 }
@@ -140,15 +138,27 @@ void CNCRouter::position_query()
     this->ext_mutex.lock();
     this->request = 2;
     this->ext_mutex.unlock();
+    this->proc_resume();
+    for(int iter = 0; iter < 2; iter++)
+    {
+        QThread::msleep(50);
+        this->WriteIntoTarget("?\n");
+    }
 }
 
 void CNCRouter::force_brake()
 {
     // ! \n 0x18 \n
-    const char bytes[] = {0x21, 0x0d, 0x18, 0x0d, 0x00};
+    const char bytes[] = {0x21, 0x0d};
+    const char bytes2[] = {0x18, 0x0d};
     this->cncrouter->setRequestToSend(true);
     this->cncrouter->write(bytes);
-    this->cncrouter->waitForBytesWritten(1000);
+    this->cncrouter->waitForBytesWritten();
+    this->cncrouter->setRequestToSend(false);
+    //QThread::msleep(150);
+    this->cncrouter->setRequestToSend(true);
+    this->cncrouter->write(bytes2);
+    this->cncrouter->waitForBytesWritten();
     this->cncrouter->setRequestToSend(false);
 }
 
@@ -161,35 +171,36 @@ bool CNCRouter::is_boot_response(QString &str)
 
 bool CNCRouter::is_position_info(QString &str)
 {
-    if(str.length() > 2 && str[0] == '<' && str[str.length() - 3] == '>') return 1;
+    if(str.contains("MPos:")) return 1;
     else return 0;
 }
 
 void CNCRouter::extract_position_info(QString &str)
 {
-    // chop string ">\r\n"
-    str.chop(3);
+    qDebug() << "-----------" << str;
     // check idle state
     int state = 1;
-    QString tmp_state_str = str.split(",")[0];
-    if(tmp_state_str == "<Idle" && this->request == 2) 
+    QString tmp_state_str = str.split("|")[0];
+    if(tmp_state_str == "<Idle" || tmp_state_str == "<Run") 
     {
-        this->proc_suspend();
+        this->ext_mutex.lock();
         this->request = 0;
+        this->ext_mutex.unlock();
+        this->proc_suspend();
         state = 0;
+        // check positions
+        double x_pos = 0;
+        double y_pos = 0;
+        double z_pos = 0;
+        int match_index = str.indexOf("MPos:", 0, Qt::CaseInsensitive);
+        QString substr = QString::fromStdString(&((str.toStdString())[match_index + 5])).split("|")[0];
+        QStringList position_str_list = substr.split(",");
+        x_pos = position_str_list[0].remove("MPos:", Qt::CaseInsensitive).toDouble();
+        y_pos = position_str_list[1].toDouble();
+        z_pos = position_str_list[2].toDouble();
+        // send signals
+        emit PositionUpdated(state, x_pos, y_pos, z_pos);
     }
-    // check positions
-    double x_pos = 0;
-    double y_pos = 0;
-    double z_pos = 0;
-    int match_index = str.indexOf("WPos:", 0, Qt::CaseInsensitive);
-    QString substr = QString::fromStdString(&((str.toStdString())[match_index + 5]));
-    QStringList position_str_list = substr.split(",");
-    x_pos = position_str_list[0].toDouble();
-    y_pos = position_str_list[1].toDouble();
-    z_pos = position_str_list[2].toDouble();
-    // send signals
-    emit PositionUpdated(state, x_pos, y_pos, z_pos);
 }
 
 void CNCRouter::position_feedback_handler()
@@ -198,15 +209,15 @@ void CNCRouter::position_feedback_handler()
     for(int iter = this->serialBufferList.size() - 1; iter >= 0; iter--)
     {
         QString content_str = this->serialBufferList[iter];
-        this->serialBufMutex.unlock();
-        if(this->is_position_info(content_str))
+        if(content_str.contains("MPos:", Qt::CaseInsensitive))
         {
+            this->serialBufMutex.unlock();
             this->extract_position_info(content_str);
             this->serialBufMutex.lock();
             this->serialBufferList.clear();
+            this->cncrouter->clear();
             break;
         }
-        this->serialBufMutex.lock();
     }
     this->serialBufMutex.unlock();
 }
@@ -225,14 +236,9 @@ void CNCRouter::ReadFromTarget()
     while(this->cncrouter->canReadLine())
     {
         QString tmp = QString::fromUtf8(this->cncrouter->readLine());
-        if(tmp == "") 
-        {
-            this->cncrouter->clear(QSerialPort::Direction::Input);
-            break;
-        }
         msg += tmp;
     }
-    qDebug() << msg;
+    //qDebug() << msg;
     this->serialBufMutex.lock();
     this->serialBufferList.append(msg);
     this->serialBufferList.removeAll("");

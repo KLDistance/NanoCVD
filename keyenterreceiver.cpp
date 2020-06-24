@@ -11,7 +11,7 @@ bool KeyEnterReceiver::eventFilter(QObject *obj, QEvent *event)
     if(event->type() == QEvent::KeyPress)
     {
         QKeyEvent *key = static_cast<QKeyEvent*>(event);
-        if((key->key() == Qt::Key_Enter) || (key->key() == Qt::Key_Return))
+        if((key->key() == Qt::Key_Enter) || (key->key() == Qt::Key_Return) || (key->key() == Qt::Key_Escape))
         {
             MainWindow *mWin = (MainWindow*)this->input_obj;
             mWin->get_central_widget()->setFocus();

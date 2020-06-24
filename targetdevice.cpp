@@ -9,7 +9,8 @@ TargetDevice::TargetDevice(QObject *parent)
     this->psuarduino = new PSUAruidno(this);
     this->target_parent = parent;
     QObject::connect(this->cncrouter, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_cncrouter_valid(bool)));
-    
+    QObject::connect(this->cncrouter, SIGNAL(PositionUpdated(int, double, double, double)), 
+                     this, SLOT(obtain_cncrouter_position(int, double, double, double)));
     // initiate thread
     this->cncrouter->start();
 }
@@ -55,14 +56,18 @@ void TargetDevice::move_cncrouter(bool consecutive_mode, double x, double y, dou
     if(consecutive_mode)
     {
         // amplify the step to nearly infinitely large
-        // and use small speed
-        
+        // and use small speed (deprecated)
+        this->cncrouter->relative_stepping(x, y, z, speed);
     }
     else
     {
         this->cncrouter->relative_stepping(x, y, z, speed);
-        this->cncrouter->position_query();
     }
+}
+
+void TargetDevice::position_query()
+{
+    this->cncrouter->position_query();
 }
 
 void TargetDevice::halt_cncrouter()

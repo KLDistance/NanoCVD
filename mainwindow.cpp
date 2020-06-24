@@ -8,12 +8,16 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     // set leds
     this->led_init();
+    // invisible consecutive chb
+    ui->chb_consecutiveenable->setVisible(false);
     // set constraints on inputs
-    ui->ledit_prequiescent->setValidator(new QDoubleValidator(0, 100, 2, this));
+    this->set_validators();
     // install widgets focusing policy
     this->widgets_focus_setting();
     // set running stage table 
     this->table_init();
+    // set btn color
+    ui->btn_halt->setStyleSheet("QPushButton {background-color : #DFDFDF; color : #FF3F16}");
     
     // set up target device component
     this->target_device = new TargetDevice(this);
@@ -71,6 +75,17 @@ void MainWindow::table_init()
     ui->table_runningstages->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
     ui->table_runningstages->verticalHeader()->setFont(QFont("Consolas", 12, QFont::Bold));
     ui->table_runningstages->verticalHeader()->setDefaultAlignment(Qt::AlignCenter);
+}
+
+void MainWindow::set_validators()
+{
+    ui->ledit_xstep1->setValidator(new QDoubleValidator());
+    ui->ledit_xstep2->setValidator(new QDoubleValidator());
+    ui->ledit_xstep3->setValidator(new QDoubleValidator());
+    ui->ledit_yzstep1->setValidator(new QDoubleValidator());
+    ui->ledit_yzstep2->setValidator(new QDoubleValidator());
+    ui->ledit_yzstep3->setValidator(new QDoubleValidator());
+    ui->ledit_prequiescent->setValidator(new QDoubleValidator(0, 100, 2, this));
 }
 
 void MainWindow::widgets_focus_setting()
@@ -203,50 +218,43 @@ void MainWindow::on_btn_up_clicked()
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
-    if(ui->chb_keyboardenable->isChecked())
-    {
-        // keys controlled by chb
-        switch(event->key())
-        {
-        case Qt::Key_W:
-        {
-            this->move_z(-1.0, 50.0);
-            break;
-        }
-        case Qt::Key_S:
-        {
-            this->move_z(1.0, 50.0);
-            break;
-        }
-        case Qt::Key_A:
-        {
-            this->move_y(-1.0, 50.0);
-            break;
-        }
-        case Qt::Key_D:
-        {
-            this->move_y(1.0, 50.0);
-            break;
-        }
-        case Qt::Key_E:
-        {
-            this->move_x(1.0, 50.0);
-            break;
-        }
-        case Qt::Key_Q:
-        {
-            this->move_x(-1.0, 50.0);
-            break;
-        }
-        }
-    }
-    // keys not controlled by chb
+    // keys controlled by chb
     switch(event->key())
     {
-    case Qt::Key_R:
+    case Qt::Key_W:
     {
-        ui->chb_consecutiveenable->toggle();
-        this->change_chb_labels(ui->chb_consecutiveenable->isChecked());
+        this->move_z(1.0, 50.0);
+        break;
+    }
+    case Qt::Key_S:
+    {
+        this->move_z(-1.0, 50.0);
+        break;
+    }
+    case Qt::Key_A:
+    {
+        this->move_y(1.0, 50.0);
+        break;
+    }
+    case Qt::Key_D:
+    {
+        this->move_y(-1.0, 50.0);
+        break;
+    }
+    case Qt::Key_E:
+    {
+        this->move_x(1.0, 50.0);
+        break;
+    }
+    case Qt::Key_Q:
+    {
+        this->move_x(-1.0, 50.0);
+        break;
+    }
+    case Qt::Key_F:
+    {
+        // halt cncrouter
+        this->target_device->halt_cncrouter();
         break;
     }
     case Qt::Key_1:
@@ -296,7 +304,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event)
 {
-    if(ui->chb_consecutiveenable->isChecked())
+    if(!event->isAutoRepeat())
     {
         switch(event->key())
         {
@@ -307,19 +315,10 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event)
         case Qt::Key_Q:
         case Qt::Key_E:
         {
-            this->target_device->halt_cncrouter();
+            this->target_device->position_query();
             break;
         }
         }
-    }
-    // force halt using space key
-    switch(event->key())
-    {
-    case Qt::Key_Space:
-    {
-        this->target_device->halt_cncrouter();
-        break;
-    }
     }
 }
 
@@ -369,4 +368,9 @@ void MainWindow::on_btn_removeitem_clicked()
     {
         this->std_table_model->removeRow(select_row - 1);
     }
+}
+
+void MainWindow::on_btn_halt_clicked()
+{
+    this->target_device->halt_cncrouter();
 }

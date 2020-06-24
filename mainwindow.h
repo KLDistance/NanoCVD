@@ -37,6 +37,8 @@ public:
     void led_init();
     // table initialization
     void table_init();
+    // set validations
+    void set_validators();
     // install focus policy
     void widgets_focus_setting();
     void obtain_comport_list();
@@ -52,15 +54,11 @@ public:
 private slots:
     // cnc router comport connection
     void on_btn_cncconnect_clicked();
-    
     void on_btn_up_clicked();
-    
     void on_chb_consecutiveenable_clicked(bool checked);
-    
     void on_btn_appenditem_clicked();
-    
     void on_btn_removeitem_clicked();
-    
+    void on_btn_halt_clicked();
 private:
     Ui::MainWindow *ui;
     
