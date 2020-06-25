@@ -43,6 +43,7 @@ private:
 public slots:
     // external request signal feedback
     void obtain_ext_check_cncrouter_valid(bool is_valid);
+    void obtain_ext_check_psuarduino_valid(bool is_valid);
     // cncrouter position information feedback
     void obtain_cncrouter_position(int state, double x, double y, double z);
 };

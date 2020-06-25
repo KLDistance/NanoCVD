@@ -16,7 +16,7 @@ CNCRouter::CNCRouter(QObject *parent) :
 
 CNCRouter::~CNCRouter()
 {
-    this->cncrouter->close();
+    if(this->cncrouter->isOpen()) this->cncrouter->close();
 }
 
 void CNCRouter::PickComport(QString &port_name)
@@ -238,7 +238,6 @@ void CNCRouter::ReadFromTarget()
         QString tmp = QString::fromUtf8(this->cncrouter->readLine());
         msg += tmp;
     }
-    //qDebug() << msg;
     this->serialBufMutex.lock();
     this->serialBufferList.append(msg);
     this->serialBufferList.removeAll("");

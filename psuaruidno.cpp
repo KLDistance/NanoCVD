@@ -1,9 +1,14 @@
 #include "psuaruidno.h"
 
 PSUAruidno::PSUAruidno(QObject *parent) :
-    QObject(parent)
+    QThread(parent)
 {
     this->psuarduino = new QSerialPort(this);
+}
+
+PSUAruidno::~PSUAruidno()
+{
+    if(this->psuarduino->isOpen()) this->psuarduino->close();
 }
 
 void PSUAruidno::PickComport(QString &port_name)
@@ -16,19 +21,18 @@ void PSUAruidno::PickComport(QString &port_name)
     this->psuarduino->setFlowControl(QSerialPort::SoftwareControl);
     this->psuarduino->setParity(QSerialPort::NoParity);
     this->psuarduino->setStopBits(QSerialPort::OneStop);
+    QObject::connect(this->psuarduino, SIGNAL(readyRead()), this, SLOT(ReadFromDevice()));
 }
 
 int PSUAruidno::CheckValidDevice()
 {
-    // identifier host sender: "[host_nanocvd_8392af00]"
-    this->WriteIntoTarget("[host_nanocvd_8392af00]");
     // identifier target response: "[arduino_nanocvd_8392af01]"
     const QString feedback_lut_str = "[arduino_nanocvd_8392af01]";
     // 10 iterations for checking the buffer
     for(int iter = 0; iter < 10; iter++)
     {
         // cycle for serial port response
-        QThread::msleep(100);
+        QThread::msleep(200);
         this->serialBufMutex.lock();
         for(int jter = 0; jter < this->serialBufferList.size(); jter++)
         {
@@ -49,14 +53,68 @@ int PSUAruidno::CheckValidDevice()
 
 void PSUAruidno::WriteIntoTarget(const QString &data)
 {
+    this->psuarduino->setRequestToSend(true);
     this->psuarduino->write(data.toUtf8());
+    this->psuarduino->waitForBytesWritten();
+    this->psuarduino->setRequestToSend(false);
+}
+
+void PSUAruidno::check_arduino_valid()
+{
+    // identifier host sender: "[host_nanocvd_8392af00]"
+    this->WriteIntoTarget("[host_nanocvd_8392af00]");
+}
+
+void PSUAruidno::run()
+{
+    while(1)
+    {
+        this->proc_mutex.lock();
+        if(this->suspension_request) this->proc_notifier.wait(&this->proc_mutex);
+        if(this->stop)
+        {
+            this->proc_mutex.unlock();
+            break;
+        }
+        this->proc_mutex.unlock();
+        
+    }
+}
+
+void PSUAruidno::proc_terminate()
+{
+    this->proc_mutex.lock();
+    this->stop = true;
+    this->proc_notifier.wakeAll();
+    this->proc_mutex.unlock();
+    if(this->psuarduino->isOpen()) this->psuarduino->close();
+}
+
+void PSUAruidno::proc_suspend()
+{
+    this->proc_mutex.lock();
+    this->suspension_request = true;
+    this->proc_mutex.unlock();
+}
+
+void PSUAruidno::proc_resume()
+{
+    this->proc_mutex.lock();
+    this->suspension_request = false;
+    this->proc_notifier.wakeAll();
+    this->proc_mutex.unlock();
 }
 
 void PSUAruidno::ReadFromDevice()
 {
-    char buf[4096];
-    this->psuarduino->readLine(buf, sizeof(buf));
+    QString msg = "";
+    while(this->psuarduino->canReadLine())
+    {
+        QString tmp = QString::fromUtf8(this->psuarduino->readLine());
+        msg += tmp;
+    }
     this->serialBufMutex.lock();
-    this->serialBufferList.append(QString(buf));
+    this->serialBufferList.append(msg);
+    this->serialBufferList.removeAll("");
     this->serialBufMutex.unlock();
 }

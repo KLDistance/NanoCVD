@@ -85,7 +85,7 @@ void MainWindow::set_validators()
     ui->ledit_yzstep1->setValidator(new QDoubleValidator());
     ui->ledit_yzstep2->setValidator(new QDoubleValidator());
     ui->ledit_yzstep3->setValidator(new QDoubleValidator());
-    ui->ledit_prequiescent->setValidator(new QDoubleValidator(0, 100, 2, this));
+    ui->ledit_prequiescent->setValidator(new QDoubleValidator(0, 100, 1, this));
 }
 
 void MainWindow::widgets_focus_setting()
@@ -128,21 +128,22 @@ void MainWindow::set_position_state_labels(QString state)
 void MainWindow::move_x(double direction, double speed)
 {
     double x_unit = 0;
+    double flip = ui->chb_flipx->isChecked() ? -1 : 1;
     switch(this->mms)
     {
     case 0:
     {
-        x_unit = ui->ledit_xstep1->text().toDouble() * direction;
+        x_unit = ui->ledit_xstep1->text().toDouble() * direction * flip;
         break;
     }
     case 1:
     {
-        x_unit = ui->ledit_xstep2->text().toDouble() * direction;
+        x_unit = ui->ledit_xstep2->text().toDouble() * direction * flip;
         break;
     }
     case 2:
     {
-        x_unit = ui->ledit_xstep3->text().toDouble() * direction;
+        x_unit = ui->ledit_xstep3->text().toDouble() * direction * flip;
         break;
     }
     }
@@ -152,21 +153,22 @@ void MainWindow::move_x(double direction, double speed)
 void MainWindow::move_y(double direction, double speed)
 {
     double y_unit = 0;
+    double flip = ui->chb_flipy->isChecked() ? -1 : 1;
     switch(this->mms)
     {
     case 0:
     {
-        y_unit = ui->ledit_yzstep1->text().toDouble() * direction;
+        y_unit = ui->ledit_yzstep1->text().toDouble() * direction * flip;
         break;
     }
     case 1:
     {
-        y_unit = ui->ledit_yzstep2->text().toDouble() * direction;
+        y_unit = ui->ledit_yzstep2->text().toDouble() * direction * flip;
         break;
     }
     case 2:
     {
-        y_unit = ui->ledit_yzstep3->text().toDouble() * direction;
+        y_unit = ui->ledit_yzstep3->text().toDouble() * direction * flip;
         break;
     }
     }
@@ -176,21 +178,22 @@ void MainWindow::move_y(double direction, double speed)
 void MainWindow::move_z(double direction, double speed)
 {
     double z_unit = 0;
+    double flip = ui->chb_flipz->isChecked() ? -1 : 1;
     switch(this->mms)
     {
     case 0:
     {
-        z_unit = ui->ledit_yzstep1->text().toDouble() * direction;
+        z_unit = ui->ledit_yzstep1->text().toDouble() * direction * flip;
         break;
     }
     case 1:
     {
-        z_unit = ui->ledit_yzstep2->text().toDouble() * direction;
+        z_unit = ui->ledit_yzstep2->text().toDouble() * direction * flip;
         break;
     }
     case 2:
     {
-        z_unit = ui->ledit_yzstep3->text().toDouble() * direction;
+        z_unit = ui->ledit_yzstep3->text().toDouble() * direction * flip;
         break;
     }
     }
@@ -209,11 +212,6 @@ void MainWindow::on_btn_cncconnect_clicked()
                 this->target_device->get_port_name_list()[ui->cbox_cncserialports->currentIndex()]
                 );
     this->target_device->CheckCNCRouterPortValid();
-}
-
-void MainWindow::on_btn_up_clicked()
-{
-    
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -373,4 +371,34 @@ void MainWindow::on_btn_removeitem_clicked()
 void MainWindow::on_btn_halt_clicked()
 {
     this->target_device->halt_cncrouter();
+}
+
+void MainWindow::on_btn_up_clicked()
+{
+    this->move_z(1.0, 50.0);
+}
+
+void MainWindow::on_btn_left_clicked()
+{
+    this->move_y(1.0, 50.0);
+}
+
+void MainWindow::on_btn_down_clicked()
+{
+    this->move_z(-1.0, 50.0);
+}
+
+void MainWindow::on_btn_right_clicked()
+{
+    this->move_y(-1.0, 50.0);
+}
+
+void MainWindow::on_btn_forward_clicked()
+{
+    this->move_x(1.0, 50.0);
+}
+
+void MainWindow::on_btn_backward_clicked()
+{
+    this->move_x(-1.0, 50.0);
 }

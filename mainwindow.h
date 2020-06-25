@@ -59,6 +59,16 @@ private slots:
     void on_btn_appenditem_clicked();
     void on_btn_removeitem_clicked();
     void on_btn_halt_clicked();
+    void on_btn_left_clicked();
+    
+    void on_btn_down_clicked();
+    
+    void on_btn_right_clicked();
+    
+    void on_btn_forward_clicked();
+    
+    void on_btn_backward_clicked();
+    
 private:
     Ui::MainWindow *ui;
     
