@@ -402,3 +402,11 @@ void MainWindow::on_btn_backward_clicked()
 {
     this->move_x(-1.0, 50.0);
 }
+
+void MainWindow::on_btn_arduinoconnect_clicked()
+{
+    this->target_device->PickPSUArduinoPort(
+                this->target_device->get_port_name_list()[ui->cbox_arduinoserialports->currentIndex()]
+                );
+    this->target_device->CheckPSUArduinoPortValid();
+}

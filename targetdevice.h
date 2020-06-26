@@ -22,6 +22,8 @@ public:
     void PickPSUArduinoPort(QString &port_name);
     // check if cnc router comport is valid
     void CheckCNCRouterPortValid();
+    // check if psu arduino comport is valid
+    void CheckPSUArduinoPortValid();
     // move cnc router
     void move_cncrouter(bool consecutive_mode, double x, double y, double z, double speed);
     // check cncrouter position

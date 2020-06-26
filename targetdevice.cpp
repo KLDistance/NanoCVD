@@ -21,6 +21,8 @@ TargetDevice::~TargetDevice()
 {
     this->cncrouter->proc_terminate();
     this->cncrouter->wait();
+    this->psuarduino->proc_terminate();
+    this->psuarduino->wait();
 }
 
 void TargetDevice::ComportScan()
@@ -51,6 +53,11 @@ void TargetDevice::PickPSUArduinoPort(QString &port_name)
 void TargetDevice::CheckCNCRouterPortValid()
 {
     this->cncrouter->check_cncrouter_valid();
+}
+
+void TargetDevice::CheckPSUArduinoPortValid()
+{
+    this->psuarduino->check_arduino_valid();
 }
 
 void TargetDevice::move_cncrouter(bool consecutive_mode, double x, double y, double z, double speed)

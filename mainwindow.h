@@ -69,6 +69,8 @@ private slots:
     
     void on_btn_backward_clicked();
     
+    void on_btn_arduinoconnect_clicked();
+    
 private:
     Ui::MainWindow *ui;
     

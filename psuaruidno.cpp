@@ -27,17 +27,15 @@ void PSUAruidno::PickComport(QString &port_name)
 int PSUAruidno::CheckValidDevice()
 {
     // identifier target response: "[arduino_nanocvd_8392af01]"
-    const QString feedback_lut_str = "[arduino_nanocvd_8392af01]";
+    const QString feedback_lut_str = "arduino_nanocvd_8392af01";
     // 10 iterations for checking the buffer
-    for(int iter = 0; iter < 10; iter++)
+    for(int iter = 0; iter < 25; iter++)
     {
         // cycle for serial port response
-        QThread::msleep(200);
         this->serialBufMutex.lock();
         for(int jter = 0; jter < this->serialBufferList.size(); jter++)
         {
-            if(this->serialBufferList[jter].length() == feedback_lut_str.length() && 
-                    this->serialBufferList[jter] == feedback_lut_str)
+            if(this->serialBufferList[jter].contains(feedback_lut_str))
             {
                 this->serialBufferList.clear();
                 this->serialBufMutex.unlock();
@@ -46,6 +44,7 @@ int PSUAruidno::CheckValidDevice()
             }
         }
         this->serialBufMutex.unlock();
+        QThread::msleep(200);
     }
     // if host fails to get valid response, return 0
     return 0;
@@ -53,16 +52,14 @@ int PSUAruidno::CheckValidDevice()
 
 void PSUAruidno::WriteIntoTarget(const QString &data)
 {
-    this->psuarduino->setRequestToSend(true);
     this->psuarduino->write(data.toUtf8());
-    this->psuarduino->waitForBytesWritten();
-    this->psuarduino->setRequestToSend(false);
 }
 
 void PSUAruidno::check_arduino_valid()
 {
     // identifier host sender: "[host_nanocvd_8392af00]"
-    this->WriteIntoTarget("[host_nanocvd_8392af00]");
+    this->WriteIntoTarget("[host_nanocvd_8392af00]\n");
+    this->proc_resume();
 }
 
 void PSUAruidno::run()
@@ -77,7 +74,8 @@ void PSUAruidno::run()
             break;
         }
         this->proc_mutex.unlock();
-        
+        this->proc_suspend();
+        emit this->ext_valid_device(this->CheckValidDevice());
     }
 }
 
@@ -113,6 +111,7 @@ void PSUAruidno::ReadFromDevice()
         QString tmp = QString::fromUtf8(this->psuarduino->readLine());
         msg += tmp;
     }
+    qDebug() << msg;
     this->serialBufMutex.lock();
     this->serialBufferList.append(msg);
     this->serialBufferList.removeAll("");
