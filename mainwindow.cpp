@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     this->widgets_focus_setting();
     // set running stage table 
     this->table_init();
+    // set progress bar
+    ui->prograssbar->setValue(0);
     // set btn color
     ui->btn_halt->setStyleSheet("QPushButton {background-color : #DFDFDF; color : #FF3F16}");
     
@@ -61,7 +63,7 @@ void MainWindow::table_init()
     this->std_table_model = new QStandardItemModel();
     this->std_table_model->setColumnCount(3);
     this->std_table_model->setRowCount(1);
-    this->std_table_model->setHorizontalHeaderLabels(QStringList() << "wait (s)" << "heat (V)" << "vel (m/s)" << "dis (cm)");
+    this->std_table_model->setHorizontalHeaderLabels(QStringList() << "wait (s)" << "heat" << "velocity" << "distance");
     ui->table_runningstages->setModel(this->std_table_model);
     for(int iter = 0; iter < 4; iter++)
     {
@@ -148,6 +150,7 @@ void MainWindow::move_x(double direction, double speed)
     }
     }
     this->target_device->move_cncrouter(ui->chb_consecutiveenable->isChecked(), x_unit, 0, 0, speed);
+    QThread::msleep((int)(this->key_pressed_waitms * abs(x_unit)));
 }
 
 void MainWindow::move_y(double direction, double speed)
@@ -173,6 +176,7 @@ void MainWindow::move_y(double direction, double speed)
     }
     }
     this->target_device->move_cncrouter(ui->chb_consecutiveenable->isChecked(), 0, y_unit, 0, speed);
+    QThread::msleep((int)(this->key_pressed_waitms * abs(y_unit)));
 }
 
 void MainWindow::move_z(double direction, double speed)
@@ -198,6 +202,30 @@ void MainWindow::move_z(double direction, double speed)
     }
     }
     this->target_device->move_cncrouter(ui->chb_consecutiveenable->isChecked(), 0, 0, z_unit, speed);
+    QThread::msleep((int)(this->key_pressed_waitms * abs(z_unit)));
+}
+
+void MainWindow::set_routine_running_state(int state)
+{
+    ui->label_runningstages->setText(state == 0 ? "Idle" : "Running");
+}
+
+int MainWindow::obtain_table_contains(QVector<double> &routine_wait, QVector<double> &routine_heat, QVector<double> &routine_velocity, QVector<double> &routine_displacement)
+{
+    int row_num = this->std_table_model->rowCount();
+    for(int iter = 0; iter < row_num; iter++)
+    {
+        routine_wait.append(this->std_table_model->index(iter, 0).data().toDouble());
+        routine_heat.append(this->std_table_model->index(iter, 1).data().toDouble());
+        routine_velocity.append(this->std_table_model->index(iter, 2).data().toDouble());
+        routine_displacement.append(this->std_table_model->index(iter, 3).data().toDouble());
+    }
+    return row_num;
+}
+
+double MainWindow::obtain_prequiescent_data()
+{
+    return ui->ledit_prequiescent->text().toDouble();
 }
 
 QWidget* MainWindow::get_central_widget()
@@ -221,32 +249,32 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     {
     case Qt::Key_W:
     {
-        this->move_z(1.0, 50.0);
+        this->move_z(1.0, 100.0);
         break;
     }
     case Qt::Key_S:
     {
-        this->move_z(-1.0, 50.0);
+        this->move_z(-1.0, 100.0);
         break;
     }
     case Qt::Key_A:
     {
-        this->move_y(1.0, 50.0);
+        this->move_y(1.0, 100.0);
         break;
     }
     case Qt::Key_D:
     {
-        this->move_y(-1.0, 50.0);
+        this->move_y(-1.0, 100.0);
         break;
     }
     case Qt::Key_E:
     {
-        this->move_x(1.0, 50.0);
+        this->move_x(1.0, 100.0);
         break;
     }
     case Qt::Key_Q:
     {
-        this->move_x(-1.0, 50.0);
+        this->move_x(-1.0, 100.0);
         break;
     }
     case Qt::Key_F:

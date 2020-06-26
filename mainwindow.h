@@ -49,6 +49,13 @@ public:
     void move_x(double direction, double speed);
     void move_y(double direction, double speed);
     void move_z(double direction, double speed);
+    // set running state
+    void set_routine_running_state(int state);
+    // obtain table contains
+    int obtain_table_contains(QVector<double> &routine_wait, QVector<double> &routine_heat, 
+                               QVector<double> &routine_velocity, QVector<double> &routine_displacement);
+    // obtain prequiescent widget data
+    double obtain_prequiescent_data();
     // get central widgets
     QWidget* get_central_widget();
 private slots:
@@ -60,20 +67,15 @@ private slots:
     void on_btn_removeitem_clicked();
     void on_btn_halt_clicked();
     void on_btn_left_clicked();
-    
     void on_btn_down_clicked();
-    
     void on_btn_right_clicked();
-    
     void on_btn_forward_clicked();
-    
     void on_btn_backward_clicked();
-    
     void on_btn_arduinoconnect_clicked();
-    
 private:
     Ui::MainWindow *ui;
-    
+    // key pressed rate control
+    int key_pressed_waitms = 100;
     // motion magnitude switch
     int mms = 0;
     // constant stepping speed

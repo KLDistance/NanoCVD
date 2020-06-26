@@ -16,7 +16,7 @@ public:
     void PickComport(QString &port_name);
     int CheckValidDevice();
     void WriteIntoTarget(const QString &data);
-    void write_volt_valid(int binary_volt);
+    void write_volt_value(double target_output);
     void check_arduino_valid();
     void run() override;
     

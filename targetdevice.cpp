@@ -3,7 +3,7 @@
 #include "mainwindow.h"
 
 TargetDevice::TargetDevice(QObject *parent)
-    : QObject(parent)
+    : QThread(parent)
 {
     this->cncrouter = new CNCRouter(this);
     this->psuarduino = new PSUAruidno(this);
@@ -82,6 +82,96 @@ void TargetDevice::position_query()
 void TargetDevice::halt_cncrouter()
 {
     this->cncrouter->force_brake();
+}
+
+void TargetDevice::run()
+{
+    MainWindow *mWin = (MainWindow*)this->target_parent;
+    while(1)
+    {
+        this->proc_mutex.lock();
+        if(this->suspension_request) this->proc_notifier.wait(&this->proc_mutex);
+        if(this->stop)
+        {
+            this->proc_mutex.unlock();
+            break;
+        }
+        this->proc_mutex.unlock();
+        // prepare running stages
+        mWin->set_routine_running_state(1);
+        if(this->routine_wait.size() > 0) this->routine_wait.clear();
+        if(this->routine_heat.size() > 0) this->routine_heat.clear();
+        if(this->routine_velocity.size() > 0) this->routine_velocity.clear();
+        if(this->routine_displacement.size() > 0) this->routine_displacement.clear();
+        int stage_num = mWin->obtain_table_contains(this->routine_heat, this->routine_heat, 
+                                    this->routine_velocity, this->routine_displacement);
+        this->routine_wait.append(0);
+        this->routine_heat.append(0);
+        this->routine_velocity.append(0);
+        this->routine_displacement.append(0);
+        // prequiescence, iter in 100 msec
+        int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
+        int m_100 = m_wait / 100;
+        for(int iter = 0; iter < m_100; iter++)
+        {
+            this->proc_mutex.lock();
+            if(this->suspension_request)
+            {
+                this->proc_mutex.unlock();
+                goto EXIT_PROC;
+            }
+            this->proc_mutex.unlock();
+            QThread::msleep(100);
+        }
+        QThread::msleep(m_wait - m_100 * 100);
+        // start running stages
+        for(int iter = 0; iter < stage_num + 1; iter++)
+        {
+            // wait
+            m_wait = (int)(this->routine_wait[iter] * 1000);
+            m_100 = m_wait / 100;
+            for(int jter = 0; jter < m_100; jter++)
+            {
+                this->proc_mutex.lock();
+                if(this->suspension_request)
+                {
+                    this->proc_mutex.unlock();
+                    goto EXIT_PROC;
+                }
+                this->proc_mutex.unlock();
+                QThread::msleep(100);
+            }
+            // heat up
+            this->psuarduino->write_volt_value(this->routine_heat[iter]);
+            // move
+            this->cncrouter->relative_stepping(this->routine_displacement[iter], 0, 0, this->routine_velocity[iter]);
+        }
+        // break using goto
+        EXIT_PROC: QThread::msleep(100);
+    }
+}
+
+void TargetDevice::proc_terminate()
+{
+    this->proc_mutex.lock();
+    this->stop = true;
+    this->proc_notifier.wakeAll();
+    this->proc_mutex.unlock();
+}
+
+void TargetDevice::proc_suspend()
+{
+    this->proc_mutex.lock();
+    this->suspension_request = true;
+    this->proc_mutex.unlock();
+}
+
+void TargetDevice::proc_resume()
+{
+    this->proc_mutex.lock();
+    this->suspension_request = false;
+    this->proc_notifier.wakeAll();
+    this->proc_mutex.unlock();
 }
 
 QVector<QString> &TargetDevice::get_port_name_list()

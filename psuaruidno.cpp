@@ -4,6 +4,7 @@ PSUAruidno::PSUAruidno(QObject *parent) :
     QThread(parent)
 {
     this->psuarduino = new QSerialPort(this);
+    this->read_volt_LUT_from_file();
 }
 
 PSUAruidno::~PSUAruidno()
@@ -55,6 +56,11 @@ void PSUAruidno::WriteIntoTarget(const QString &data)
     this->psuarduino->write(data.toUtf8());
 }
 
+void PSUAruidno::write_volt_value(double target_output)
+{
+    
+}
+
 void PSUAruidno::check_arduino_valid()
 {
     // identifier host sender: "[host_nanocvd_8392af00]"
@@ -101,6 +107,26 @@ void PSUAruidno::proc_resume()
     this->suspension_request = false;
     this->proc_notifier.wakeAll();
     this->proc_mutex.unlock();
+}
+
+void PSUAruidno::read_volt_LUT_from_file()
+{
+    QStringList word_list;
+    QFile f("./dependencies/volt_lut.csv");
+    if(f.open(QIODevice::ReadOnly))
+    {
+        QString data;
+        data = f.readAll();
+        word_list = data.split("\n");
+        word_list.removeAll("");
+        f.close();
+    }
+    for(int iter = 0; iter < word_list.size(); iter++)
+    {
+        QStringList tmp_list = word_list[iter].split(",");
+        this->volt_output.append(tmp_list[0].toDouble());
+        this->volt_real_output.append((tmp_list[1].toDouble()));
+    }
 }
 
 void PSUAruidno::ReadFromDevice()

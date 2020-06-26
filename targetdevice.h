@@ -10,7 +10,7 @@
 #include "cncrouter.h"
 #include "psuaruidno.h"
 
-class TargetDevice : public QObject
+class TargetDevice : public QThread
 {
     Q_OBJECT
 public:
@@ -31,6 +31,13 @@ public:
     // halt cnc router
     void halt_cncrouter();
     
+    // run routine
+    void run() override;
+    // routine-running processing thread terminate, suspend and resume
+    void proc_terminate();
+    void proc_suspend();
+    void proc_resume();
+    
     // check if arduino comport is valid
     int IsPSUArduinoPortValid();
     QVector<QString>& get_port_name_list();
@@ -42,6 +49,18 @@ private:
     QObject *target_parent;
     CNCRouter *cncrouter;
     PSUAruidno *psuarduino;
+    
+    // target device mutex and events
+    QMutex proc_mutex;
+    QWaitCondition proc_notifier;
+    bool stop = false;
+    bool suspension_request = false;
+    
+    // routine settings
+    QVector<double> routine_wait;
+    QVector<double> routine_heat;
+    QVector<double> routine_velocity;
+    QVector<double> routine_displacement;
 public slots:
     // external request signal feedback
     void obtain_ext_check_cncrouter_valid(bool is_valid);
