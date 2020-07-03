@@ -34,6 +34,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    this->target_device->cncrouter->proc_terminate();
+    this->target_device->cncrouter->wait();
+    this->target_device->psuarduino->proc_terminate();
+    this->target_device->psuarduino->wait();
+    this->target_device->terminate();
+    this->target_device->wait();
     delete ui;
 }
 
@@ -378,7 +384,6 @@ void MainWindow::run_signal_from_target()
     MainWindow *mWin = (MainWindow*)this->target_device->target_parent;
     while(1)
     {
-        qDebug() << "Break down debugging ----------------------------------";
         this->target_device->proc_suspend();
         this->target_device->proc_mutex.lock();
         if(this->target_device->suspension_request) this->target_device->proc_notifier.wait(&this->target_device->proc_mutex);
@@ -388,7 +393,6 @@ void MainWindow::run_signal_from_target()
             break;
         }
         this->target_device->proc_mutex.unlock();
-        qDebug() << "Process starts...";
         // prepare running stages
         mWin->set_routine_running_state(1);
         if(this->target_device->routine_wait.size() > 0) this->target_device->routine_wait.clear();
@@ -402,7 +406,6 @@ void MainWindow::run_signal_from_target()
         this->target_device->routine_velocity.push_back(100);
         this->target_device->routine_displacement.push_back(0);
         // prequiescence, iter in 100 msec
-        qDebug() << "Prequiescence... " << this->target_device->routine_heat.size() << " x " << stage_num;
         int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
         int m_100 = m_wait / 100;
         for(int iter = 0; iter < m_100; iter++)
@@ -415,16 +418,13 @@ void MainWindow::run_signal_from_target()
             }
             this->target_device->proc_mutex.unlock();
             QThread::msleep(100);
-            qDebug() << "print sleep iteration " << iter;
         }
         QThread::msleep(m_wait - m_100 * 100);
         // start running stages
         for(int iter = 0; iter < stage_num + 1; iter++)
         {
             // heat up
-            qDebug() << "before writing voltage";
             emit this->target_device->volt_write_trigger(this->target_device->routine_heat[iter]);
-            qDebug() << "write voltage";
             // wait
             m_wait = (int)(this->target_device->routine_wait[iter] * 1000);
             m_100 = m_wait / 100;
@@ -439,7 +439,6 @@ void MainWindow::run_signal_from_target()
                 }
                 this->target_device->proc_mutex.unlock();
                 QThread::msleep(100);
-                qDebug() << "print sleep iteration2 " << iter;
             }
             // move
             this->target_device->cncrouter->relative_stepping(this->target_device->routine_displacement[iter], 0, 0, this->target_device->routine_velocity[iter]);
@@ -531,4 +530,63 @@ void MainWindow::on_btn_arduinoconnect_clicked()
 void MainWindow::on_btn_cvdrun_clicked()
 {
     this->target_device->proc_resume();
+}
+
+void MainWindow::on_btn_tblsave_clicked()
+{
+    QString file_path = QFileDialog::getSaveFileName(this, "Save a parameter file", this->last_load_file_pos);
+    QFile f(file_path);
+    if(f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+    {
+        QTextStream qts(&f);
+        // save data out of the table
+        qts << ui->ledit_prequiescent->text() << "," << ui->ledit_inertgas->text() << "," << ui->ledit_propanegas->text() << "," << ui->ledit_butane->text() << "\n";
+        // save data inside the table
+        int row_num = this->std_table_model->rowCount();
+        for(int iter = 0; iter < row_num; iter++)
+        {
+            qts << this->std_table_model->index(iter, 0).data().toString() << "," << 
+                   this->std_table_model->index(iter, 1).data().toString() << "," << 
+                   this->std_table_model->index(iter, 2).data().toString() << "," <<
+                   this->std_table_model->index(iter, 3).data().toString() << "\n";
+        }
+        f.close();
+    }
+}
+
+void MainWindow::on_btn_tblload_clicked()
+{
+    QString file_path = QFileDialog::getOpenFileName(this, "Open a parameter file", this->last_load_file_pos);
+    QFile f(file_path);
+    if(f.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        // data outside the table
+        if(!f.atEnd())
+        {
+            QStringList tmp_str_list = QString(f.readLine()).split(",");
+            tmp_str_list.removeAll("");
+            ui->ledit_prequiescent->setText(tmp_str_list[0]);
+            ui->ledit_inertgas->setText(tmp_str_list[1]);
+            ui->ledit_propanegas->setText(tmp_str_list[2]);
+            ui->ledit_butane->setText(tmp_str_list[3]);
+        }
+        // data inside the table
+        this->std_table_model->setRowCount(0);
+        while(!f.atEnd())
+        {
+            QStringList tmp_str_list = QString(f.readLine()).split(",");
+            qDebug() << tmp_str_list;
+            tmp_str_list.removeAll("");
+            int row_num = this->std_table_model->rowCount(QModelIndex());
+            this->std_table_model->insertRow(row_num);
+            for(int iter = 0; iter < 4; iter++)
+            {
+                ui->table_runningstages->model()->setData(ui->table_runningstages->model()->index(row_num, iter), 
+                                                          Qt::AlignCenter, Qt::TextAlignmentRole);
+                this->std_table_model->item(row_num, iter)->setFont(QFont("Consolas", 12, QFont::Normal));
+                ui->table_runningstages->model()->setData(this->std_table_model->index(row_num, iter), QVariant::fromValue(tmp_str_list[iter].toDouble()));
+            }
+        }
+        f.close();
+    }
 }

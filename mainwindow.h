@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QStandardItem>
 #include <QKeyEvent>
+#include <QFileDialog>
 
 #include "qledindicator.h"
 #include "targetdevice.h"
@@ -74,6 +75,10 @@ private slots:
     void on_btn_arduinoconnect_clicked();
     void on_btn_cvdrun_clicked();
     
+    void on_btn_tblsave_clicked();
+    
+    void on_btn_tblload_clicked();
+    
 private:
     Ui::MainWindow *ui;
     // key pressed rate control
@@ -82,6 +87,10 @@ private:
     int mms = 0;
     // constant stepping speed
     double step_speed = 50.0;
+    
+    // QFileDialog last position
+    QString last_load_file_pos = "C://";
+    
     // keypress and release capture
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);

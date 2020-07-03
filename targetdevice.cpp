@@ -18,13 +18,7 @@ TargetDevice::TargetDevice(QObject *parent)
 
 TargetDevice::~TargetDevice()
 {
-    this->cncrouter->proc_terminate();
-    this->cncrouter->wait();
-    this->psuarduino->proc_terminate();
-    this->psuarduino->wait();
-    this->terminate();
-    this->wait();
-    qDebug() << "target device destroyed...";
+    
 }
 
 void TargetDevice::ComportScan()
@@ -162,8 +156,6 @@ void TargetDevice::obtain_cncrouter_position(int state, double x, double y, doub
 
 void TargetDevice::run_signal_from_arduino()
 {
-    //if(this->psuarduino->psuarduino) delete this->psuarduino->psuarduino;
-    //this->psuarduino->init_comport_object();
     while(1)
     {
         this->psuarduino->proc_mutex.lock();
@@ -184,7 +176,6 @@ void TargetDevice::run_signal_from_arduino()
         }
         case 2:
         {
-            qDebug() << "Write Voltage Process Here....";
             //this->psuarduino->write_volt_value();
             break;
         }
