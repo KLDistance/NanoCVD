@@ -34,6 +34,10 @@ public:
     // target device
     TargetDevice *target_device;
     
+    // process is running?
+    QMutex routine_running_bool_mutex;
+    bool is_routine_running = false;
+    
     // led initialization
     void led_init();
     // table initialization

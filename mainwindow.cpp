@@ -393,6 +393,10 @@ void MainWindow::run_signal_from_target()
             break;
         }
         this->target_device->proc_mutex.unlock();
+        this->routine_running_bool_mutex.lock();
+        this->is_routine_running = true;
+        ui->btn_cvdrun->setText("Stop");
+        this->routine_running_bool_mutex.unlock();
         // prepare running stages
         mWin->set_routine_running_state(1);
         if(this->target_device->routine_wait.size() > 0) this->target_device->routine_wait.clear();
@@ -401,10 +405,6 @@ void MainWindow::run_signal_from_target()
         if(this->target_device->routine_displacement.size() > 0) this->target_device->routine_displacement.clear();
         int stage_num = mWin->obtain_table_contains(this->target_device->routine_wait, this->target_device->routine_heat, 
                                     this->target_device->routine_velocity, this->target_device->routine_displacement);
-        this->target_device->routine_wait.push_back(1);
-        this->target_device->routine_heat.push_back(0);
-        this->target_device->routine_velocity.push_back(100);
-        this->target_device->routine_displacement.push_back(0);
         // prequiescence, iter in 100 msec
         int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
         int m_100 = m_wait / 100;
@@ -421,7 +421,7 @@ void MainWindow::run_signal_from_target()
         }
         QThread::msleep(m_wait - m_100 * 100);
         // start running stages
-        for(int iter = 0; iter < stage_num + 1; iter++)
+        for(int iter = 0; iter < stage_num; iter++)
         {
             // heat up
             emit this->target_device->volt_write_trigger(this->target_device->routine_heat[iter]);
@@ -443,8 +443,15 @@ void MainWindow::run_signal_from_target()
             // move
             this->target_device->cncrouter->relative_stepping(this->target_device->routine_displacement[iter], 0, 0, this->target_device->routine_velocity[iter]);
         }
-        // break using goto
-        EXIT_PROC: QThread::msleep(100);
+        // break using goto, clear the voltage output state
+        EXIT_PROC: 
+        emit this->target_device->volt_write_trigger(0);
+        QThread::msleep(1000);
+        // reset click button
+        this->routine_running_bool_mutex.lock();
+        this->is_routine_running = false;
+        ui->btn_cvdrun->setText("Run");
+        this->routine_running_bool_mutex.unlock();
     }
 }
 
@@ -529,7 +536,17 @@ void MainWindow::on_btn_arduinoconnect_clicked()
 
 void MainWindow::on_btn_cvdrun_clicked()
 {
-    this->target_device->proc_resume();
+    this->routine_running_bool_mutex.lock();
+    if(this->is_routine_running)
+    {
+        this->routine_running_bool_mutex.unlock();
+        this->target_device->proc_suspend();
+    }
+    else
+    {
+        this->routine_running_bool_mutex.unlock();
+        this->target_device->proc_resume();
+    }
 }
 
 void MainWindow::on_btn_tblsave_clicked()
