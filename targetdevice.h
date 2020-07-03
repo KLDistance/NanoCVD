@@ -41,7 +41,7 @@ public:
     // check if arduino comport is valid
     int IsPSUArduinoPortValid();
     QVector<QString>& get_port_name_list();
-private:
+
     QVector<quint16> vendor_id;
     QVector<quint16> product_id;
     QVector<QString> port_name;
@@ -54,19 +54,28 @@ private:
     QMutex proc_mutex;
     QWaitCondition proc_notifier;
     bool stop = false;
-    bool suspension_request = false;
+    bool suspension_request = true;
     
     // routine settings
     QVector<double> routine_wait;
     QVector<double> routine_heat;
     QVector<double> routine_velocity;
     QVector<double> routine_displacement;
+    
+    // Thread timer
+    QTimer *thread_timer = nullptr;
 public slots:
     // external request signal feedback
     void obtain_ext_check_cncrouter_valid(bool is_valid);
     void obtain_ext_check_psuarduino_valid(bool is_valid);
     // cncrouter position information feedback
     void obtain_cncrouter_position(int state, double x, double y, double z);
+    // signals from thread run
+    void run_signal_from_arduino();
+    void run_signal_from_cncrouter();
+signals:
+    void thread_run_signal();
+    void volt_write_trigger(double volt);
 };
 
 #endif // TARGETDEVICE_H

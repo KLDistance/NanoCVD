@@ -68,38 +68,10 @@ void CNCRouter::WriteIntoTarget(const QString &data)
 
 void CNCRouter::run()
 {
-    while(1)
-    {
-        this->proc_mutex.lock();
-        if(this->suspension_request) this->proc_notifier.wait(&this->proc_mutex);
-        if(this->stop)
-        {
-            this->proc_mutex.unlock();
-            break;
-        }
-        this->proc_mutex.unlock();
-        // external requests
-        this->ext_mutex.lock();
-        switch(this->request)
-        {
-        // cncrouter serial port valid check
-        case 1:
-        {
-            this->request = 0;
-            this->ext_mutex.unlock();
-            this->proc_suspend();
-            emit this->ext_valid_device(this->CheckValidDevice());
-            break;
-        }
-        // position handler
-        case 2:
-        {
-            this->ext_mutex.unlock();
-            QThread::msleep(20);
-            this->position_feedback_handler();
-        }
-        }
-    }
+    this->thread_timer = new QTimer(0);
+    this->thread_timer->moveToThread(this);
+    this->thread_timer->start();
+    emit this->cncrouter_thread_run_signal();
 }
 
 void CNCRouter::proc_terminate()

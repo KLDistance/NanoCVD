@@ -72,6 +72,8 @@ private slots:
     void on_btn_forward_clicked();
     void on_btn_backward_clicked();
     void on_btn_arduinoconnect_clicked();
+    void on_btn_cvdrun_clicked();
+    
 private:
     Ui::MainWindow *ui;
     // key pressed rate control
@@ -85,5 +87,9 @@ private:
     void keyReleaseEvent(QKeyEvent *event);
     // change stepping/vel chb labels
     void change_chb_labels(bool is_consecutive_mode);
+public slots:
+    void run_signal_from_target();
+    void trigger_volt_write(double volt);
+    void init_arduino_serial_port();
 };
 #endif // MAINWINDOW_H

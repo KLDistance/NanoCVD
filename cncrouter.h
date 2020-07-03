@@ -31,7 +31,7 @@ public:
     // external requests
     // check cncrouter serial port validity
     void check_cncrouter_valid();
-private:
+
     QSerialPort *cncrouter;
     bool is_device_available = false;
     
@@ -50,6 +50,9 @@ private:
     
     QString last_tmp_str = "";
     
+    // thread timer
+    QTimer *thread_timer = nullptr;
+    
     // initial boot response recognition
     bool is_boot_response(QString &str);
     // position feedback recognition
@@ -65,6 +68,7 @@ signals:
     void PositionUpdated(int state, double x, double y, double z);
     // external request signals
     void ext_valid_device(bool is_valid);
+    void cncrouter_thread_run_signal();
 };
 
 #endif // CNCROUTER_H

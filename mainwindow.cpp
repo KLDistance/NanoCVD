@@ -23,10 +23,13 @@ MainWindow::MainWindow(QWidget *parent)
     
     // set up target device component
     this->target_device = new TargetDevice(this);
+    QObject::connect(this->target_device, SIGNAL(thread_run_signal()), this, SLOT(run_signal_from_target()), Qt::DirectConnection);
+    QObject::connect(this->target_device, SIGNAL(volt_write_trigger(double)), this, SLOT(trigger_volt_write(double)), Qt::BlockingQueuedConnection);
+    QObject::connect(this->target_device->psuarduino, SIGNAL(init_arduino_serial_port_trigger()), this, SLOT(init_arduino_serial_port()), Qt::DirectConnection);
+    this->target_device->start();
     // scan available ports at the boot of the software (needs modification)
     this->target_device->ComportScan();
     this->obtain_comport_list();
-    
 }
 
 MainWindow::~MainWindow()
@@ -215,10 +218,10 @@ int MainWindow::obtain_table_contains(QVector<double> &routine_wait, QVector<dou
     int row_num = this->std_table_model->rowCount();
     for(int iter = 0; iter < row_num; iter++)
     {
-        routine_wait.append(this->std_table_model->index(iter, 0).data().toDouble());
-        routine_heat.append(this->std_table_model->index(iter, 1).data().toDouble());
-        routine_velocity.append(this->std_table_model->index(iter, 2).data().toDouble());
-        routine_displacement.append(this->std_table_model->index(iter, 3).data().toDouble());
+        routine_wait.push_back(this->std_table_model->index(iter, 0).data().toDouble());
+        routine_heat.push_back(this->std_table_model->index(iter, 1).data().toDouble());
+        routine_velocity.push_back(this->std_table_model->index(iter, 2).data().toDouble());
+        routine_displacement.push_back(this->std_table_model->index(iter, 3).data().toDouble());
     }
     return row_num;
 }
@@ -370,6 +373,92 @@ void MainWindow::change_chb_labels(bool is_consecutive_mode)
     }
 }
 
+void MainWindow::run_signal_from_target()
+{
+    MainWindow *mWin = (MainWindow*)this->target_device->target_parent;
+    while(1)
+    {
+        qDebug() << "Break down debugging ----------------------------------";
+        this->target_device->proc_suspend();
+        this->target_device->proc_mutex.lock();
+        if(this->target_device->suspension_request) this->target_device->proc_notifier.wait(&this->target_device->proc_mutex);
+        if(this->target_device->stop)
+        {
+            this->target_device->proc_mutex.unlock();
+            break;
+        }
+        this->target_device->proc_mutex.unlock();
+        qDebug() << "Process starts...";
+        // prepare running stages
+        mWin->set_routine_running_state(1);
+        if(this->target_device->routine_wait.size() > 0) this->target_device->routine_wait.clear();
+        if(this->target_device->routine_heat.size() > 0) this->target_device->routine_heat.clear();
+        if(this->target_device->routine_velocity.size() > 0) this->target_device->routine_velocity.clear();
+        if(this->target_device->routine_displacement.size() > 0) this->target_device->routine_displacement.clear();
+        int stage_num = mWin->obtain_table_contains(this->target_device->routine_wait, this->target_device->routine_heat, 
+                                    this->target_device->routine_velocity, this->target_device->routine_displacement);
+        this->target_device->routine_wait.push_back(1);
+        this->target_device->routine_heat.push_back(0);
+        this->target_device->routine_velocity.push_back(100);
+        this->target_device->routine_displacement.push_back(0);
+        // prequiescence, iter in 100 msec
+        qDebug() << "Prequiescence... " << this->target_device->routine_heat.size() << " x " << stage_num;
+        int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
+        int m_100 = m_wait / 100;
+        for(int iter = 0; iter < m_100; iter++)
+        {
+            this->target_device->proc_mutex.lock();
+            if(this->target_device->suspension_request)
+            {
+                this->target_device->proc_mutex.unlock();
+                goto EXIT_PROC;
+            }
+            this->target_device->proc_mutex.unlock();
+            QThread::msleep(100);
+            qDebug() << "print sleep iteration " << iter;
+        }
+        QThread::msleep(m_wait - m_100 * 100);
+        // start running stages
+        for(int iter = 0; iter < stage_num + 1; iter++)
+        {
+            // heat up
+            qDebug() << "before writing voltage";
+            emit this->target_device->volt_write_trigger(this->target_device->routine_heat[iter]);
+            qDebug() << "write voltage";
+            // wait
+            m_wait = (int)(this->target_device->routine_wait[iter] * 1000);
+            m_100 = m_wait / 100;
+            qDebug() << this->target_device->routine_wait[iter];
+            for(int jter = 0; jter < m_100; jter++)
+            {
+                this->target_device->proc_mutex.lock();
+                if(this->target_device->suspension_request)
+                {
+                    this->target_device->proc_mutex.unlock();
+                    goto EXIT_PROC;
+                }
+                this->target_device->proc_mutex.unlock();
+                QThread::msleep(100);
+                qDebug() << "print sleep iteration2 " << iter;
+            }
+            // move
+            this->target_device->cncrouter->relative_stepping(this->target_device->routine_displacement[iter], 0, 0, this->target_device->routine_velocity[iter]);
+        }
+        // break using goto
+        EXIT_PROC: QThread::msleep(100);
+    }
+}
+
+void MainWindow::trigger_volt_write(double volt)
+{
+    this->target_device->psuarduino->ext_write_volt(volt);
+}
+
+void MainWindow::init_arduino_serial_port()
+{
+    this->target_device->psuarduino->psuarduino = new QSerialPort(this->target_device->psuarduino);
+}
+
 void MainWindow::on_chb_consecutiveenable_clicked(bool checked)
 {
     this->change_chb_labels(checked);
@@ -437,4 +526,9 @@ void MainWindow::on_btn_arduinoconnect_clicked()
                 this->target_device->get_port_name_list()[ui->cbox_arduinoserialports->currentIndex()]
                 );
     this->target_device->CheckPSUArduinoPortValid();
+}
+
+void MainWindow::on_btn_cvdrun_clicked()
+{
+    this->target_device->proc_resume();
 }

@@ -3,7 +3,7 @@
 PSUAruidno::PSUAruidno(QObject *parent) :
     QThread(parent)
 {
-    this->psuarduino = new QSerialPort(this);
+    this->init_comport_object();
     this->read_volt_LUT_from_file();
 }
 
@@ -23,6 +23,11 @@ void PSUAruidno::PickComport(QString &port_name)
     this->psuarduino->setParity(QSerialPort::NoParity);
     this->psuarduino->setStopBits(QSerialPort::OneStop);
     QObject::connect(this->psuarduino, SIGNAL(readyRead()), this, SLOT(ReadFromDevice()));
+}
+
+void PSUAruidno::init_comport_object()
+{
+    this->psuarduino = new QSerialPort(this);
 }
 
 int PSUAruidno::CheckValidDevice()
@@ -53,36 +58,47 @@ int PSUAruidno::CheckValidDevice()
 
 void PSUAruidno::WriteIntoTarget(const QString &data)
 {
+    qDebug() << "$$$$$$$$$$$$$$$";
+    qDebug() << data << " Volt";
     this->psuarduino->write(data.toUtf8());
+    qDebug() << "***************";
 }
 
-void PSUAruidno::write_volt_value(double target_output)
+void PSUAruidno::write_volt_value()
 {
-    
+    // find interval for output
+    int lut_size = this->volt_output.size();
+    int volt_bin = 0;
+    for(int iter = 0; iter < lut_size; iter++)
+    {
+        double tmp_dif = this->volt_real_output[iter] - this->write_in_volt;
+        if(tmp_dif >= 0)
+        {
+            volt_bin = iter;
+            break;
+        }
+    }
+    this->WriteIntoTarget(QString::number(volt_bin) + "\n");
+    qDebug() << volt_bin << "\n" << "--------------";
 }
 
 void PSUAruidno::check_arduino_valid()
 {
     // identifier host sender: "[host_nanocvd_8392af00]"
     this->WriteIntoTarget("[host_nanocvd_8392af00]\n");
+    this->ext_mutex.lock();
+    this->ext_request = 1;
+    this->ext_mutex.unlock();
     this->proc_resume();
 }
 
 void PSUAruidno::run()
 {
-    while(1)
-    {
-        this->proc_mutex.lock();
-        if(this->suspension_request) this->proc_notifier.wait(&this->proc_mutex);
-        if(this->stop)
-        {
-            this->proc_mutex.unlock();
-            break;
-        }
-        this->proc_mutex.unlock();
-        this->proc_suspend();
-        emit this->ext_valid_device(this->CheckValidDevice());
-    }
+    this->thread_timer = new QTimer(nullptr);
+    this->thread_timer->moveToThread(this);
+    this->thread_timer->start();
+    //emit this->init_arduino_serial_port_trigger();
+    emit this->psuarduino_thread_run_signal();
 }
 
 void PSUAruidno::proc_terminate()
@@ -109,6 +125,22 @@ void PSUAruidno::proc_resume()
     this->proc_mutex.unlock();
 }
 
+void PSUAruidno::ext_write_volt(double volt)
+{
+    this->ext_mutex.lock();
+    this->write_in_volt = volt;
+    this->ext_request = 2;
+    this->ext_mutex.unlock();
+    this->write_volt_value();
+    /*
+    this->ext_mutex.lock();
+    this->write_in_volt = volt;
+    this->ext_request = 2;
+    this->ext_mutex.unlock();
+    this->proc_resume();
+    */
+}
+
 void PSUAruidno::read_volt_LUT_from_file()
 {
     QStringList word_list;
@@ -117,16 +149,18 @@ void PSUAruidno::read_volt_LUT_from_file()
     {
         QString data;
         data = f.readAll();
-        word_list = data.split("\n");
+        word_list = data.split("\r\n");
         word_list.removeAll("");
         f.close();
     }
+    qDebug() << "---------------loc1";
     for(int iter = 0; iter < word_list.size(); iter++)
     {
         QStringList tmp_list = word_list[iter].split(",");
         this->volt_output.append(tmp_list[0].toDouble());
         this->volt_real_output.append((tmp_list[1].toDouble()));
     }
+    qDebug() << "---------------loc2 " << word_list.size();
 }
 
 void PSUAruidno::ReadFromDevice()

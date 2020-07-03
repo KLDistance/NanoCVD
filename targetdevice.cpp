@@ -5,16 +5,15 @@
 TargetDevice::TargetDevice(QObject *parent)
     : QThread(parent)
 {
+    this->target_parent = parent;
     this->cncrouter = new CNCRouter(this);
     this->psuarduino = new PSUAruidno(this);
-    this->target_parent = parent;
-    QObject::connect(this->cncrouter, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_cncrouter_valid(bool)));
+    QObject::connect(this->cncrouter, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_cncrouter_valid(bool)), Qt::DirectConnection);
     QObject::connect(this->cncrouter, SIGNAL(PositionUpdated(int, double, double, double)), 
-                     this, SLOT(obtain_cncrouter_position(int, double, double, double)));
-    QObject::connect(this->psuarduino, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_psuarduino_valid(bool)));
-    // initiate thread
-    this->cncrouter->start();
-    this->psuarduino->start();
+                     this, SLOT(obtain_cncrouter_position(int, double, double, double)), Qt::DirectConnection);
+    QObject::connect(this->psuarduino, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_psuarduino_valid(bool)), Qt::DirectConnection);
+    QObject::connect(this->cncrouter, SIGNAL(cncrouter_thread_run_signal()), this, SLOT(run_signal_from_cncrouter()), Qt::DirectConnection);
+    QObject::connect(this->psuarduino, SIGNAL(psuarduino_thread_run_signal()), this, SLOT(run_signal_from_arduino()), Qt::DirectConnection);
 }
 
 TargetDevice::~TargetDevice()
@@ -23,6 +22,9 @@ TargetDevice::~TargetDevice()
     this->cncrouter->wait();
     this->psuarduino->proc_terminate();
     this->psuarduino->wait();
+    this->terminate();
+    this->wait();
+    qDebug() << "target device destroyed...";
 }
 
 void TargetDevice::ComportScan()
@@ -86,69 +88,12 @@ void TargetDevice::halt_cncrouter()
 
 void TargetDevice::run()
 {
-    MainWindow *mWin = (MainWindow*)this->target_parent;
-    while(1)
-    {
-        this->proc_mutex.lock();
-        if(this->suspension_request) this->proc_notifier.wait(&this->proc_mutex);
-        if(this->stop)
-        {
-            this->proc_mutex.unlock();
-            break;
-        }
-        this->proc_mutex.unlock();
-        // prepare running stages
-        mWin->set_routine_running_state(1);
-        if(this->routine_wait.size() > 0) this->routine_wait.clear();
-        if(this->routine_heat.size() > 0) this->routine_heat.clear();
-        if(this->routine_velocity.size() > 0) this->routine_velocity.clear();
-        if(this->routine_displacement.size() > 0) this->routine_displacement.clear();
-        int stage_num = mWin->obtain_table_contains(this->routine_heat, this->routine_heat, 
-                                    this->routine_velocity, this->routine_displacement);
-        this->routine_wait.append(0);
-        this->routine_heat.append(0);
-        this->routine_velocity.append(0);
-        this->routine_displacement.append(0);
-        // prequiescence, iter in 100 msec
-        int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
-        int m_100 = m_wait / 100;
-        for(int iter = 0; iter < m_100; iter++)
-        {
-            this->proc_mutex.lock();
-            if(this->suspension_request)
-            {
-                this->proc_mutex.unlock();
-                goto EXIT_PROC;
-            }
-            this->proc_mutex.unlock();
-            QThread::msleep(100);
-        }
-        QThread::msleep(m_wait - m_100 * 100);
-        // start running stages
-        for(int iter = 0; iter < stage_num + 1; iter++)
-        {
-            // wait
-            m_wait = (int)(this->routine_wait[iter] * 1000);
-            m_100 = m_wait / 100;
-            for(int jter = 0; jter < m_100; jter++)
-            {
-                this->proc_mutex.lock();
-                if(this->suspension_request)
-                {
-                    this->proc_mutex.unlock();
-                    goto EXIT_PROC;
-                }
-                this->proc_mutex.unlock();
-                QThread::msleep(100);
-            }
-            // heat up
-            this->psuarduino->write_volt_value(this->routine_heat[iter]);
-            // move
-            this->cncrouter->relative_stepping(this->routine_displacement[iter], 0, 0, this->routine_velocity[iter]);
-        }
-        // break using goto
-        EXIT_PROC: QThread::msleep(100);
-    }
+    this->thread_timer = new QTimer(0);
+    this->thread_timer->moveToThread(this);
+    this->thread_timer->start();
+    this->cncrouter->start();
+    this->psuarduino->start();
+    emit this->thread_run_signal();
 }
 
 void TargetDevice::proc_terminate()
@@ -213,4 +158,75 @@ void TargetDevice::obtain_cncrouter_position(int state, double x, double y, doub
     mWin->set_position_feedback_labels(x, y, z);
     if(state) mWin->set_position_state_labels("Running");
     else mWin->set_position_state_labels("Idle");
+}
+
+void TargetDevice::run_signal_from_arduino()
+{
+    //if(this->psuarduino->psuarduino) delete this->psuarduino->psuarduino;
+    //this->psuarduino->init_comport_object();
+    while(1)
+    {
+        this->psuarduino->proc_mutex.lock();
+        if(this->psuarduino->suspension_request) this->psuarduino->proc_notifier.wait(&this->psuarduino->proc_mutex);
+        if(this->psuarduino->stop)
+        {
+            this->psuarduino->proc_mutex.unlock();
+            break;
+        }
+        this->psuarduino->proc_mutex.unlock();
+        this->psuarduino->ext_mutex.lock();
+        switch(this->psuarduino->ext_request)
+        {
+        case 1:
+        {
+            emit this->psuarduino->ext_valid_device(this->psuarduino->CheckValidDevice());
+            break;
+        }
+        case 2:
+        {
+            qDebug() << "Write Voltage Process Here....";
+            //this->psuarduino->write_volt_value();
+            break;
+        }
+        }
+        this->psuarduino->ext_request = 0;
+        this->psuarduino->ext_mutex.unlock();
+        this->psuarduino->proc_suspend();
+    }
+}
+
+void TargetDevice::run_signal_from_cncrouter()
+{
+    while(1)
+    {
+        this->cncrouter->proc_mutex.lock();
+        if(this->cncrouter->suspension_request) this->cncrouter->proc_notifier.wait(&this->cncrouter->proc_mutex);
+        if(this->cncrouter->stop)
+        {
+            this->cncrouter->proc_mutex.unlock();
+            break;
+        }
+        this->cncrouter->proc_mutex.unlock();
+        // external requests
+        this->cncrouter->ext_mutex.lock();
+        switch(this->cncrouter->request)
+        {
+        // cncrouter serial port valid check
+        case 1:
+        {
+            this->cncrouter->request = 0;
+            this->cncrouter->ext_mutex.unlock();
+            this->cncrouter->proc_suspend();
+            emit this->cncrouter->ext_valid_device(this->cncrouter->CheckValidDevice());
+            break;
+        }
+        // position handler
+        case 2:
+        {
+            this->cncrouter->ext_mutex.unlock();
+            QThread::msleep(20);
+            this->cncrouter->position_feedback_handler();
+        }
+        }
+    }
 }
