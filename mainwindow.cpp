@@ -254,44 +254,51 @@ void MainWindow::on_btn_cncconnect_clicked()
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     // keys controlled by chb
+    if(ui->chb_keyboardenable->isChecked())
+    {
+        
+        switch(event->key())
+        {
+        case Qt::Key_W:
+        {
+            this->move_z(1.0, 100.0);
+            break;
+        }
+        case Qt::Key_S:
+        {
+            this->move_z(-1.0, 100.0);
+            break;
+        }
+        case Qt::Key_A:
+        {
+            this->move_y(1.0, 100.0);
+            break;
+        }
+        case Qt::Key_D:
+        {
+            this->move_y(-1.0, 100.0);
+            break;
+        }
+        case Qt::Key_E:
+        {
+            this->move_x(1.0, 100.0);
+            break;
+        }
+        case Qt::Key_Q:
+        {
+            this->move_x(-1.0, 100.0);
+            break;
+        }
+        case Qt::Key_F:
+        {
+            // halt cncrouter
+            this->target_device->halt_cncrouter();
+            break;
+        }
+        }
+    }
     switch(event->key())
     {
-    case Qt::Key_W:
-    {
-        this->move_z(1.0, 100.0);
-        break;
-    }
-    case Qt::Key_S:
-    {
-        this->move_z(-1.0, 100.0);
-        break;
-    }
-    case Qt::Key_A:
-    {
-        this->move_y(1.0, 100.0);
-        break;
-    }
-    case Qt::Key_D:
-    {
-        this->move_y(-1.0, 100.0);
-        break;
-    }
-    case Qt::Key_E:
-    {
-        this->move_x(1.0, 100.0);
-        break;
-    }
-    case Qt::Key_Q:
-    {
-        this->move_x(-1.0, 100.0);
-        break;
-    }
-    case Qt::Key_F:
-    {
-        // halt cncrouter
-        this->target_device->halt_cncrouter();
-        break;
-    }
     case Qt::Key_1:
     {
         this->positioning_leds[this->mms]->setChecked(false);
@@ -397,6 +404,7 @@ void MainWindow::run_signal_from_target()
         this->is_routine_running = true;
         ui->btn_cvdrun->setText("Stop");
         this->routine_running_bool_mutex.unlock();
+        ui->motionstate->setText("Running");
         // prepare running stages
         mWin->set_routine_running_state(1);
         if(this->target_device->routine_wait.size() > 0) this->target_device->routine_wait.clear();
@@ -405,6 +413,13 @@ void MainWindow::run_signal_from_target()
         if(this->target_device->routine_displacement.size() > 0) this->target_device->routine_displacement.clear();
         int stage_num = mWin->obtain_table_contains(this->target_device->routine_wait, this->target_device->routine_heat, 
                                     this->target_device->routine_velocity, this->target_device->routine_displacement);
+        // calculate range of progress bar
+        double time_total = ui->ledit_prequiescent->text().toDouble();
+        int total_iter = 0;
+        for(int iter = 0; iter < this->target_device->routine_wait.size(); iter++)
+        {
+            time_total += this->target_device->routine_wait[iter];
+        }
         // prequiescence, iter in 100 msec
         int m_wait = (int)(mWin->obtain_prequiescent_data() * 1000);
         int m_100 = m_wait / 100;
@@ -418,6 +433,8 @@ void MainWindow::run_signal_from_target()
             }
             this->target_device->proc_mutex.unlock();
             QThread::msleep(100);
+            total_iter++;
+            this->ui->prograssbar->setValue((int)((total_iter * 10.0) / time_total));
         }
         QThread::msleep(m_wait - m_100 * 100);
         // start running stages
@@ -439,6 +456,8 @@ void MainWindow::run_signal_from_target()
                 }
                 this->target_device->proc_mutex.unlock();
                 QThread::msleep(100);
+                total_iter++;
+                this->ui->prograssbar->setValue((int)((total_iter * 10.0) / time_total));
             }
             // move
             this->target_device->cncrouter->relative_stepping(this->target_device->routine_displacement[iter], 0, 0, this->target_device->routine_velocity[iter]);
@@ -447,6 +466,8 @@ void MainWindow::run_signal_from_target()
         EXIT_PROC: 
         emit this->target_device->volt_write_trigger(0);
         QThread::msleep(1000);
+        this->ui->prograssbar->setValue(0);
+        ui->motionstate->setText("Idle");
         // reset click button
         this->routine_running_bool_mutex.lock();
         this->is_routine_running = false;
