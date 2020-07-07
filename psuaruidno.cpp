@@ -1,4 +1,5 @@
 #include "psuaruidno.h"
+#include <QMessageBox>
 
 PSUAruidno::PSUAruidno(QObject *parent) :
     QThread(parent)
