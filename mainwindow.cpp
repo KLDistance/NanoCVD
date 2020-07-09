@@ -26,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this->target_device, SIGNAL(thread_run_signal()), this, SLOT(run_signal_from_target()), Qt::DirectConnection);
     QObject::connect(this->target_device, SIGNAL(volt_write_trigger(double)), this, SLOT(trigger_volt_write(double)), Qt::BlockingQueuedConnection);
     QObject::connect(this->target_device->psuarduino, SIGNAL(init_arduino_serial_port_trigger()), this, SLOT(init_arduino_serial_port()), Qt::DirectConnection);
+    QObject::connect(this->target_device, SIGNAL(cncrouter_main_thread_msgbox()), this, SLOT(cncrouter_msgbox()), Qt::BlockingQueuedConnection);
+    QObject::connect(this->target_device, SIGNAL(psuarduino_main_thread_msgbox()), this, SLOT(psuarduino_msgbox()), Qt::BlockingQueuedConnection);
     this->target_device->start();
     // scan available ports at the boot of the software (needs modification)
     this->target_device->ComportScan();
@@ -484,6 +486,16 @@ void MainWindow::trigger_volt_write(double volt)
 void MainWindow::init_arduino_serial_port()
 {
     this->target_device->psuarduino->psuarduino = new QSerialPort(this->target_device->psuarduino);
+}
+
+void MainWindow::cncrouter_msgbox()
+{
+    QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to CNC Router!", QMessageBox::Yes);
+}
+
+void MainWindow::psuarduino_msgbox()
+{
+    QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to Arduino!", QMessageBox::Yes);
 }
 
 void MainWindow::on_chb_consecutiveenable_clicked(bool checked)

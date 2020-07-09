@@ -104,5 +104,7 @@ public slots:
     void run_signal_from_target();
     void trigger_volt_write(double volt);
     void init_arduino_serial_port();
+    void cncrouter_msgbox();
+    void psuarduino_msgbox();
 };
 #endif // MAINWINDOW_H

@@ -1,4 +1,3 @@
-#include <QMessageBox>
 #include "targetdevice.h"
 #include "mainwindow.h"
 
@@ -8,10 +7,16 @@ TargetDevice::TargetDevice(QObject *parent)
     this->target_parent = parent;
     this->cncrouter = new CNCRouter(this);
     this->psuarduino = new PSUAruidno(this);
-    QObject::connect(this->cncrouter, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_cncrouter_valid(bool)), Qt::DirectConnection);
+    // init messagebox
+    this->msgbox = new QMessageBox(nullptr);
+    this->msgbox->setWindowTitle("Serial Port Invalid");
+    this->msgbox->setModal(false);
+    this->msgbox->hide();
+    
+    QObject::connect(this->cncrouter, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_cncrouter_valid(bool)));
     QObject::connect(this->cncrouter, SIGNAL(PositionUpdated(int, double, double, double)), 
                      this, SLOT(obtain_cncrouter_position(int, double, double, double)), Qt::DirectConnection);
-    QObject::connect(this->psuarduino, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_psuarduino_valid(bool)), Qt::DirectConnection);
+    QObject::connect(this->psuarduino, SIGNAL(ext_valid_device(bool)), this, SLOT(obtain_ext_check_psuarduino_valid(bool)));
     QObject::connect(this->cncrouter, SIGNAL(cncrouter_thread_run_signal()), this, SLOT(run_signal_from_cncrouter()), Qt::DirectConnection);
     QObject::connect(this->psuarduino, SIGNAL(psuarduino_thread_run_signal()), this, SLOT(run_signal_from_arduino()), Qt::DirectConnection);
 }
@@ -128,7 +133,7 @@ void TargetDevice::obtain_ext_check_cncrouter_valid(bool is_valid)
     else
     {
         mWin->serialport_leds[0]->setChecked(false);
-        QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to CNC Router!", QMessageBox::Yes);
+        //QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to CNC Router!", QMessageBox::Yes);
     }
 }
 
@@ -142,7 +147,7 @@ void TargetDevice::obtain_ext_check_psuarduino_valid(bool is_valid)
     else
     {
         mWin->serialport_leds[1]->setChecked(false);
-        QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to Arduino!", QMessageBox::Yes);
+        //QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to Arduino!", QMessageBox::Yes);
     }
 }
 
@@ -171,17 +176,21 @@ void TargetDevice::run_signal_from_arduino()
         {
         case 1:
         {
-            emit this->psuarduino->ext_valid_device(this->psuarduino->CheckValidDevice());
+            this->psuarduino->ext_request = 0;
+            this->psuarduino->ext_mutex.unlock();
+            bool valid_state = this->psuarduino->CheckValidDevice();
+            if(!valid_state) emit this->psuarduino_main_thread_msgbox();
+            emit this->psuarduino->ext_valid_device(valid_state);
             break;
         }
         case 2:
         {
+            this->psuarduino->ext_request = 0;
+            this->psuarduino->ext_mutex.unlock();
             //this->psuarduino->write_volt_value();
             break;
         }
         }
-        this->psuarduino->ext_request = 0;
-        this->psuarduino->ext_mutex.unlock();
         this->psuarduino->proc_suspend();
     }
 }
@@ -208,7 +217,9 @@ void TargetDevice::run_signal_from_cncrouter()
             this->cncrouter->request = 0;
             this->cncrouter->ext_mutex.unlock();
             this->cncrouter->proc_suspend();
-            emit this->cncrouter->ext_valid_device(this->cncrouter->CheckValidDevice());
+            bool valid_state = this->cncrouter->CheckValidDevice();
+            if(!valid_state) emit this->cncrouter_main_thread_msgbox();
+            emit this->cncrouter->ext_valid_device(valid_state);
             break;
         }
         // position handler

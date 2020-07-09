@@ -6,6 +6,7 @@
 #include <QtSerialPort>
 #include <string>
 #include <QMainWindow>
+#include <QMessageBox>
 
 #include "cncrouter.h"
 #include "psuaruidno.h"
@@ -64,6 +65,9 @@ public:
     
     // Thread timer
     QTimer *thread_timer = nullptr;
+    
+    // QMessagebox
+    QMessageBox *msgbox = nullptr;
 public slots:
     // external request signal feedback
     void obtain_ext_check_cncrouter_valid(bool is_valid);
@@ -76,6 +80,8 @@ public slots:
 signals:
     void thread_run_signal();
     void volt_write_trigger(double volt);
+    void cncrouter_main_thread_msgbox();
+    void psuarduino_main_thread_msgbox();
 };
 
 #endif // TARGETDEVICE_H
