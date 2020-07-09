@@ -37,7 +37,7 @@ int CNCRouter::CheckValidDevice()
 {
     const QString feedback_lut_str = QString(feedback_lut);
     // 25 iterations for checking the buffer (5s timeout)
-    for(int iter = 0; iter < 25; iter++)
+    for(int iter = 0; iter < 30; iter++)
     {
         this->serialBufMutex.lock();
         for(int jter = 0; jter < this->serialBufferList.size(); jter++)
@@ -52,7 +52,7 @@ int CNCRouter::CheckValidDevice()
         }
         this->serialBufMutex.unlock();
         // cycle for serial port response
-        QThread::msleep(200);
+        QThread::msleep(100);
     }
     // if host fails to get valid response, return 0
     return 0;

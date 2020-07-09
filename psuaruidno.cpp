@@ -36,7 +36,7 @@ int PSUAruidno::CheckValidDevice()
     // identifier target response: "[arduino_nanocvd_8392af01]"
     const QString feedback_lut_str = "arduino_nanocvd_8392af01";
     // 10 iterations for checking the buffer
-    for(int iter = 0; iter < 25; iter++)
+    for(int iter = 0; iter < 30; iter++)
     {
         // cycle for serial port response
         this->serialBufMutex.lock();
@@ -51,7 +51,7 @@ int PSUAruidno::CheckValidDevice()
             }
         }
         this->serialBufMutex.unlock();
-        QThread::msleep(200);
+        QThread::msleep(100);
     }
     // if host fails to get valid response, return 0
     return 0;
