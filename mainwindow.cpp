@@ -21,6 +21,14 @@ MainWindow::MainWindow(QWidget *parent)
     // set btn color
     ui->btn_halt->setStyleSheet("QPushButton {background-color : #DFDFDF; color : #FF3F16}");
     
+    // QSettings
+    this->settings = new QSettings(QCoreApplication::applicationDirPath() + "/dependecies/settings.ini", QSettings::IniFormat);
+    QString tmp_setting_path = this->settings->value("previous_path").toString();
+    if(tmp_setting_path != "")
+    {
+        this->last_load_file_pos = tmp_setting_path;
+    }
+    
     // set up target device component
     this->target_device = new TargetDevice(this);
     QObject::connect(this->target_device, SIGNAL(thread_run_signal()), this, SLOT(run_signal_from_target()), Qt::DirectConnection);
@@ -36,6 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    this->settings->setValue("previous_path", this->last_load_file_pos);
+    delete this->settings;
     this->target_device->cncrouter->proc_terminate();
     this->target_device->cncrouter->wait();
     this->target_device->psuarduino->proc_terminate();
@@ -589,6 +599,7 @@ void MainWindow::on_btn_tblsave_clicked()
     QFile f(file_path);
     if(f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
     {
+        this->last_load_file_pos = file_path;
         QTextStream qts(&f);
         // save data out of the table
         qts << ui->ledit_prequiescent->text() << "," << ui->ledit_inertgas->text() << "," << ui->ledit_propanegas->text() << "," << ui->ledit_butane->text() << "\n";
@@ -611,6 +622,7 @@ void MainWindow::on_btn_tblload_clicked()
     QFile f(file_path);
     if(f.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        this->last_load_file_pos = file_path;
         // data outside the table
         if(!f.atEnd())
         {

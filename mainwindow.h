@@ -78,13 +78,9 @@ private slots:
     void on_btn_backward_clicked();
     void on_btn_arduinoconnect_clicked();
     void on_btn_cvdrun_clicked();
-    
     void on_btn_tblsave_clicked();
-    
     void on_btn_tblload_clicked();
-    
     void on_btn_refreshcomport_clicked();
-    
 private:
     Ui::MainWindow *ui;
     // key pressed rate control
@@ -96,6 +92,8 @@ private:
     
     // QFileDialog last position
     QString last_load_file_pos = "C://";
+    // QSettings parameter
+    QSettings *settings = nullptr;
     
     // keypress and release capture
     void keyPressEvent(QKeyEvent *event);
