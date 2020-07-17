@@ -119,6 +119,8 @@ void MainWindow::widgets_focus_setting()
 void MainWindow::obtain_comport_list()
 {
     int port_num = this->target_device->get_port_name_list().size();
+    ui->cbox_cncserialports->clear();
+    ui->cbox_arduinoserialports->clear();
     for(int iter = 0; iter < port_num; iter++)
     {
         ui->cbox_cncserialports->addItem(this->target_device->get_port_name_list()[iter]);
@@ -447,7 +449,6 @@ void MainWindow::run_signal_from_target()
             // wait
             m_wait = (int)(this->target_device->routine_wait[iter] * 1000);
             m_100 = m_wait / 100;
-            qDebug() << this->target_device->routine_wait[iter];
             for(int jter = 0; jter < m_100; jter++)
             {
                 this->target_device->proc_mutex.lock();
@@ -625,7 +626,6 @@ void MainWindow::on_btn_tblload_clicked()
         while(!f.atEnd())
         {
             QStringList tmp_str_list = QString(f.readLine()).split(",");
-            qDebug() << tmp_str_list;
             tmp_str_list.removeAll("");
             int row_num = this->std_table_model->rowCount(QModelIndex());
             this->std_table_model->insertRow(row_num);
@@ -639,4 +639,10 @@ void MainWindow::on_btn_tblload_clicked()
         }
         f.close();
     }
+}
+
+void MainWindow::on_btn_refreshcomport_clicked()
+{
+    this->target_device->ComportScan();
+    this->obtain_comport_list();
 }

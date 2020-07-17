@@ -76,9 +76,7 @@ void PSUAruidno::write_volt_value()
             break;
         }
     }
-    qDebug() << "Write starts " << QString::number(volt_bin);
     this->WriteIntoTarget(QString::number(volt_bin) + "\n");
-    qDebug() << "Finished starts";
 }
 
 void PSUAruidno::check_arduino_valid()

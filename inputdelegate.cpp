@@ -12,7 +12,7 @@ QWidget *InputDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem
     QLineEdit *lineEdit = new QLineEdit(parent);
     // set validator
     MainWindow *mWin = (MainWindow*)this->obj;
-    QDoubleValidator *validator = new QDoubleValidator(0, 100, 3, mWin);
+    QDoubleValidator *validator = new QDoubleValidator(-1800, 1800, 3, mWin);
     lineEdit->setValidator(validator);
     lineEdit->setFocus();
     return lineEdit;

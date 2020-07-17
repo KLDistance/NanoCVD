@@ -187,7 +187,6 @@ void TargetDevice::run_signal_from_arduino()
         {
             this->psuarduino->ext_request = 0;
             this->psuarduino->ext_mutex.unlock();
-            //this->psuarduino->write_volt_value();
             break;
         }
         }

@@ -83,6 +83,8 @@ private slots:
     
     void on_btn_tblload_clicked();
     
+    void on_btn_refreshcomport_clicked();
+    
 private:
     Ui::MainWindow *ui;
     // key pressed rate control
