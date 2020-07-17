@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->btn_halt->setStyleSheet("QPushButton {background-color : #DFDFDF; color : #FF3F16}");
     
     // QSettings
-    this->settings = new QSettings(QCoreApplication::applicationDirPath() + "/dependecies/settings.ini", QSettings::IniFormat);
+    this->settings = new QSettings(QCoreApplication::applicationDirPath() + "/dependencies/settings.ini", QSettings::IniFormat);
     QString tmp_setting_path = this->settings->value("previous_path").toString();
     if(tmp_setting_path != "")
     {
