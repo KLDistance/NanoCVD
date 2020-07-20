@@ -4,11 +4,11 @@ void setup() {
 }
 
 void loop() {
-  for(int iter = 0; iter < 256; iter++)
+  for(int iter = 0; iter < 245; iter++)
   {
     Serial.println(iter);
     analogWrite(3, iter);
-    delay(3500);
+    delay(4000);
   }
   while(1)
   {
