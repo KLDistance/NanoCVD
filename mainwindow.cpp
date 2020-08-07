@@ -240,7 +240,18 @@ int MainWindow::obtain_table_contains(QVector<double> &routine_wait, QVector<dou
     {
         routine_wait.push_back(this->std_table_model->index(iter, 0).data().toDouble());
         routine_heat.push_back(this->std_table_model->index(iter, 1).data().toDouble());
-        routine_velocity.push_back(this->std_table_model->index(iter, 2).data().toDouble());
+        double tmp_vel = this->std_table_model->index(iter, 2).data().toDouble();
+        if (tmp_vel < 0.02)
+        {
+            // some errors left in "set table value" parts, only leap over the set function and coerce the value by default 
+            //this->std_table_model->item(iter, 2)->setText(QString::number(0.02));
+            //this->std_table_model->setData(this->std_table_model->index(iter, 2), QVariant(0.02));
+            routine_velocity.push_back(0.02);
+        }
+        else
+        {
+            routine_velocity.push_back(tmp_vel);
+        }
         routine_displacement.push_back(this->std_table_model->index(iter, 3).data().toDouble());
     }
     return row_num;
@@ -473,7 +484,10 @@ void MainWindow::run_signal_from_target()
                 this->ui->prograssbar->setValue((int)((total_iter * 10.0) / time_total));
             }
             // move
+            ui->btn_cvdrun->setEnabled(false);
             this->target_device->cncrouter->relative_stepping(this->target_device->routine_displacement[iter], 0, 0, this->target_device->routine_velocity[iter]);
+            QThread::msleep(this->target_device->routine_displacement[iter] / (this->target_device->routine_velocity[iter] < 0.04 ? 0.04 : this->target_device->routine_velocity[iter]) * 1000);
+            ui->btn_cvdrun->setEnabled(true);
         }
         // break using goto, clear the voltage output state
         EXIT_PROC: 

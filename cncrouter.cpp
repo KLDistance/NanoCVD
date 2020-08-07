@@ -100,7 +100,7 @@ void CNCRouter::proc_resume()
 
 void CNCRouter::relative_stepping(double xstep, double ystep, double zstep, double speed)
 {
-    QString serial_input = "G21G91X" + QString::number(xstep) + "Y" + 
+    QString serial_input = "G21G91G1X" + QString::number(xstep) + "Y" + 
             QString::number(ystep) + "Z" + QString::number(zstep) + "F" + QString::number(speed)+ "\n";
     this->WriteIntoTarget(serial_input);
 }
