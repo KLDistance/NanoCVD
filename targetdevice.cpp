@@ -255,15 +255,15 @@ void TargetDevice::run_signal_from_flowmeter()
         // #1
         QString flow_rate_query = QString("!0") + QString::number(1) + QString(",F\r\n");
         this->flowmeter->WriteIntoTarget(flow_rate_query);
-        QThread::msleep(400);
+        QThread::msleep(220);
         // #2
         flow_rate_query = QString("!0") + QString::number(2) + QString(",F\r\n");
         this->flowmeter->WriteIntoTarget(flow_rate_query);
-        QThread::msleep(400);
+        QThread::msleep(220);
         // #3
         flow_rate_query = QString("!0") + QString::number(3) + QString(",F\r\n");
         this->flowmeter->WriteIntoTarget(flow_rate_query);
-        QThread::msleep(400);
+        QThread::msleep(220);
         // obtain flow rate in ml/min for 3 meters
         double propf = 0, butaf = 0, argof = 0;
         // 01 for propane, 02 for butane, 03 for argon

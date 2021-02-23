@@ -693,8 +693,7 @@ void MainWindow::on_btn_flowmeter_clicked()
     this->target_device->PickFlowmeterPort(
                 this->target_device->get_port_name_list()[ui->cbox_flowmeterports->currentIndex()]
                 );
-    qDebug() << "button clicked";
+    this->serialport_leds[2]->setChecked(true);
     this->target_device->flowmeter->start();
     this->target_device->flowmeter->proc_resume();
-    qDebug() << this->target_device->flowmeter->serial_buffer_list.size();
 }
