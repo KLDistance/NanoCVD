@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this->target_device->psuarduino, SIGNAL(init_arduino_serial_port_trigger()), this, SLOT(init_arduino_serial_port()), Qt::DirectConnection);
     QObject::connect(this->target_device, SIGNAL(cncrouter_main_thread_msgbox()), this, SLOT(cncrouter_msgbox()), Qt::BlockingQueuedConnection);
     QObject::connect(this->target_device, SIGNAL(psuarduino_main_thread_msgbox()), this, SLOT(psuarduino_msgbox()), Qt::BlockingQueuedConnection);
+    QObject::connect(this->target_device, SIGNAL(flowrate_indicator_update(double, double, double)), this, SLOT(set_flowrate(double, double, double)), Qt::DirectConnection);
     this->target_device->start();
     // scan available ports at the boot of the software (needs modification)
     this->target_device->ComportScan();
@@ -50,6 +51,8 @@ MainWindow::~MainWindow()
     this->target_device->cncrouter->wait();
     this->target_device->psuarduino->proc_terminate();
     this->target_device->psuarduino->wait();
+    this->target_device->flowmeter->proc_terminate();
+    this->target_device->flowmeter->wait();
     this->target_device->terminate();
     this->target_device->wait();
     delete ui;
@@ -58,7 +61,7 @@ MainWindow::~MainWindow()
 void MainWindow::led_init()
 {
     // set up leds for serial port connection
-    for(int i = 0; i < 2; i++)
+    for(int i = 0; i < 3; i++)
     {
         this->serialport_leds.append(new QLedIndicator(this));
         // indicator, therefore disable clicking
@@ -66,6 +69,7 @@ void MainWindow::led_init()
     }
     ui->layout_cncserial->addWidget(this->serialport_leds[0]);
     ui->layout_arduinoserial->addWidget(this->serialport_leds[1]);
+    ui->layout_flowmeterserial->addWidget(this->serialport_leds[2]);
     // set up leds for prepositioning tab
     for(int i = 0; i < 3; i++)
     {
@@ -135,6 +139,7 @@ void MainWindow::obtain_comport_list()
     {
         ui->cbox_cncserialports->addItem(this->target_device->get_port_name_list()[iter]);
         ui->cbox_arduinoserialports->addItem(this->target_device->get_port_name_list()[iter]);
+        ui->cbox_flowmeterports->addItem(this->target_device->get_port_name_list()[iter]);
     }
 }
 
@@ -523,6 +528,13 @@ void MainWindow::psuarduino_msgbox()
     QMessageBox::critical(nullptr, "Serial Port Invalid", "Unable to connect to Arduino!", QMessageBox::Yes);
 }
 
+void MainWindow::set_flowrate(double propf, double butaf, double argof)
+{
+    this->ui->indicator_propaneflow->setText(QString::number(propf));
+    this->ui->indicator_butaneflow->setText(QString::number(butaf));
+    this->ui->indicator_argonflow->setText(QString::number(argof));
+}
+
 void MainWindow::on_chb_consecutiveenable_clicked(bool checked)
 {
     this->change_chb_labels(checked);
@@ -669,6 +681,20 @@ void MainWindow::on_btn_tblload_clicked()
 
 void MainWindow::on_btn_refreshcomport_clicked()
 {
+    ui->cbox_cncserialports->clear();
+    ui->cbox_arduinoserialports->clear();
+    ui->cbox_flowmeterports->clear();
     this->target_device->ComportScan();
     this->obtain_comport_list();
+}
+
+void MainWindow::on_btn_flowmeter_clicked()
+{
+    this->target_device->PickFlowmeterPort(
+                this->target_device->get_port_name_list()[ui->cbox_flowmeterports->currentIndex()]
+                );
+    qDebug() << "button clicked";
+    this->target_device->flowmeter->start();
+    this->target_device->flowmeter->proc_resume();
+    qDebug() << this->target_device->flowmeter->serial_buffer_list.size();
 }

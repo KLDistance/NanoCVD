@@ -17,6 +17,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     cncrouter.cpp \
+    flowmeter.cpp \
     inputdelegate.cpp \
     keyenterreceiver.cpp \
     main.cpp \
@@ -27,6 +28,7 @@ SOURCES += \
 
 HEADERS += \
     cncrouter.h \
+    flowmeter.h \
     inputdelegate.h \
     keyenterreceiver.h \
     mainwindow.h \

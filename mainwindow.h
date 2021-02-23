@@ -81,6 +81,8 @@ private slots:
     void on_btn_tblsave_clicked();
     void on_btn_tblload_clicked();
     void on_btn_refreshcomport_clicked();
+    void on_btn_flowmeter_clicked();
+    
 private:
     Ui::MainWindow *ui;
     // key pressed rate control
@@ -106,5 +108,6 @@ public slots:
     void init_arduino_serial_port();
     void cncrouter_msgbox();
     void psuarduino_msgbox();
+    void set_flowrate(double propf = 0, double butaf = 0, double argof = 0);
 };
 #endif // MAINWINDOW_H

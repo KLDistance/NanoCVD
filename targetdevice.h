@@ -10,6 +10,7 @@
 
 #include "cncrouter.h"
 #include "psuaruidno.h"
+#include "flowmeter.h"
 
 class TargetDevice : public QThread
 {
@@ -21,6 +22,7 @@ public:
     void ComportScan();
     void PickCNCRouterPort(QString &port_name);
     void PickPSUArduinoPort(QString &port_name);
+    void PickFlowmeterPort(QString &port_name);
     // check if cnc router comport is valid
     void CheckCNCRouterPortValid();
     // check if psu arduino comport is valid
@@ -50,6 +52,7 @@ public:
     QObject *target_parent;
     CNCRouter *cncrouter;
     PSUAruidno *psuarduino;
+    Flowmeter *flowmeter;
     
     // target device mutex and events
     QMutex proc_mutex;
@@ -77,11 +80,13 @@ public slots:
     // signals from thread run
     void run_signal_from_arduino();
     void run_signal_from_cncrouter();
+    void run_signal_from_flowmeter();
 signals:
     void thread_run_signal();
     void volt_write_trigger(double volt);
     void cncrouter_main_thread_msgbox();
     void psuarduino_main_thread_msgbox();
+    void flowrate_indicator_update(double propf, double butaf, double argof);
 };
 
 #endif // TARGETDEVICE_H
